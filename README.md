@@ -112,7 +112,7 @@ Public scenarios may eventually enter training data. A later study should use he
 
 ## Why this fits the author
 
-Bryon Miller directs a community-college computer science division and teaches cybersecurity. He has published cyber threat intelligence research, built hands-on assessments, coached collegiate esports, and worked earlier in his career as a counselor. Third Chair draws on that mix: cyber evidence, assessment design, competitive play, and the problem of helping people change course while they are under pressure.
+I, Bryon Miller, direct a community-college computer science division and teaches cybersecurity. I have have published cyber threat intelligence research, built hands-on assessments, coached collegiate esports, and worked earlier in my career as a counselor. The Third Chair draws on that mix: cyber evidence, assessment design, competitive play, and the problem of helping people change course while they are under pressure.
 
 - [Research profile](https://www.jinfowar.com/authors/bryon-miller)
 - [LinkedIn](https://www.linkedin.com/in/bryonmiller)
