@@ -1,0 +1,37 @@
+{
+  "models": [
+    {
+      "label": "model-a",
+      "base_url": "https://openrouter.ai/api/v1",
+      "model": "replace-with-exact-model-id",
+      "api_key_env": "OPENROUTER_API_KEY",
+      "temperature": 0.2,
+      "extra_headers": {
+        "HTTP-Referer": "https://github.com/bryonmiller/third-chair",
+        "X-Title": "Third Chair"
+      }
+    },
+    {
+      "label": "model-b",
+      "base_url": "https://openrouter.ai/api/v1",
+      "model": "replace-with-exact-model-id",
+      "api_key_env": "OPENROUTER_API_KEY",
+      "temperature": 0.2,
+      "extra_headers": {
+        "HTTP-Referer": "https://github.com/bryonmiller/third-chair",
+        "X-Title": "Third Chair"
+      }
+    },
+    {
+      "label": "model-c",
+      "base_url": "https://openrouter.ai/api/v1",
+      "model": "replace-with-exact-model-id",
+      "api_key_env": "OPENROUTER_API_KEY",
+      "temperature": 0.2,
+      "extra_headers": {
+        "HTTP-Referer": "https://github.com/bryonmiller/third-chair",
+        "X-Title": "Third Chair"
+      }
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.org/third-chair/actor-intent.schema.json",
+  "title": "Third Chair actor intent",
+  "type": "object",
+  "required": ["belief_opponent_responsible", "posture", "public_message", "private_reason", "evidence_ids"],
+  "properties": {
+    "belief_opponent_responsible": {"type": "integer", "minimum": 0, "maximum": 100},
+    "posture": {"type": "string"},
+    "public_message": {"type": "string", "minLength": 1},
+    "private_reason": {"type": "string", "minLength": 1},
+    "evidence_ids": {"type": "array", "items": {"type": "string"}, "uniqueItems": true}
+  },
+  "additionalProperties": false
+}
+

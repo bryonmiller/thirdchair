@@ -1,0 +1,12 @@
+cff-version: 1.2.0
+message: "If you use Third Chair, please cite it with the metadata below."
+title: "The Third Chair: a rotating model tournament for cyber-crisis mediation"
+type: software
+version: 0.3.0
+date-released: 2026-08-12
+authors:
+  - family-names: Miller
+    given-names: Bryon
+url: "https://bryonmiller.github.io/third-chair/"
+license: MIT
+abstract: "A paired evaluation of whether a rotating model mediator reduces cyber-crisis escalation without rewarding deception or weakening accurate attribution."

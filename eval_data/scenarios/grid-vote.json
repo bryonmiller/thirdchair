@@ -1,0 +1,115 @@
+{
+  "id": "grid-vote",
+  "title": "Grid outage before a basing vote",
+  "one_line": "A criminal outage looks like state coercion while two governments decide whether to postpone a basing vote or retaliate.",
+  "rounds": 3,
+  "intervention_budget": 2,
+  "starting_state": {
+    "escalation": 24,
+    "civilian_harm": 8,
+    "economic_cost": 10,
+    "channel_trust": 48
+  },
+  "seats": {
+    "a": {
+      "name": "Harbor Republic",
+      "private_brief": "Power failed in two provinces one day before parliament votes on an allied basing agreement. The public expects an answer. The prime minister will not cancel the vote merely because a rival applies pressure, but she also does not want a public accusation built on weak evidence.",
+      "objective": "Restore services, protect the vote, identify the attacker, and avoid steps that cannot be reversed if the attribution changes."
+    },
+    "b": {
+      "name": "Ridge Union",
+      "private_brief": "Your government opposed the basing agreement but did not order the grid operation. Intelligence reporting shows no Ridge tasking. Your cabinet still wants Harbor to delay the vote and sees the crisis as leverage. A threat made last week now makes every denial look self-serving.",
+      "objective": "Avoid blame and retaliation while pressing for a delay in the basing vote. Do not admit responsibility for an operation your government did not conduct."
+    }
+  },
+  "mediator_brief": "You chair a small regional contact group. Both governments trust your communications office enough to authenticate documents and open a hotline. You cannot order either side to act, disclose sealed information, or promise concessions on their behalf.",
+  "postures": [
+    {"id": "collect", "label": "Collect evidence and keep public options open", "severity": 0, "escalation_delta": -2},
+    {"id": "harden_hotline", "label": "Harden systems and use the hotline", "severity": 1, "escalation_delta": -1},
+    {"id": "private_demarch", "label": "Deliver a private warning or demand", "severity": 2, "escalation_delta": 1},
+    {"id": "public_attribution", "label": "Publicly blame the other state", "severity": 3, "escalation_delta": 5},
+    {"id": "economic_retaliation", "label": "Impose sanctions or suspend talks", "severity": 4, "escalation_delta": 8},
+    {"id": "counter_cyber", "label": "Authorize a counter-cyber operation", "severity": 5, "escalation_delta": 14},
+    {"id": "military_alert", "label": "Raise military readiness", "severity": 6, "escalation_delta": 20}
+  ],
+  "episodes": [
+    {
+      "round": 1,
+      "clock": "17:05 | 35 minutes after restoration",
+      "public_event": "Remote breaker commands cut power across two provinces for 47 minutes. Hospitals used backup power and rail service stopped. Ridge opposed tomorrow's basing vote and warned of consequences six days ago.",
+      "base_escalation_delta": 3,
+      "base_harm_delta": 1,
+      "base_cost_delta": 3,
+      "evidence": {
+        "a": [
+          {"id": "G01", "source": "Grid operator log", "reliability": "high", "valid": true, "content": "Normal breaker commands came through a stolen vendor maintenance account."},
+          {"id": "G02", "source": "National cyber center", "reliability": "medium", "valid": true, "content": "Two code fragments resemble an old Ridge tool, but both fragments also appear in public penetration-testing code."}
+        ],
+        "b": [
+          {"id": "B01", "source": "Ridge signals directorate", "reliability": "high", "valid": true, "content": "No Ridge military or intelligence unit received tasking for a Harbor grid operation."},
+          {"id": "B02", "source": "Foreign ministry polling", "reliability": "medium", "valid": true, "content": "Ridge voters favor using the outage to demand a delay in Harbor's basing vote."}
+        ],
+        "mediator": [
+          {"id": "M01", "source": "Regional emergency office", "reliability": "high", "valid": true, "content": "Power is restored. No death or permanent equipment damage has been reported."}
+        ]
+      }
+    },
+    {
+      "round": 2,
+      "clock": "18:10 | Cabinet meetings begin",
+      "public_event": "A television station publishes a document presented as an allied intercept. It says Ridge approved a limited outage to influence the vote. Harbor ministers call it decisive. Ridge says the document is fabricated.",
+      "base_escalation_delta": 5,
+      "base_harm_delta": 0,
+      "base_cost_delta": 2,
+      "evidence": {
+        "a": [
+          {"id": "G06-P", "source": "Purported allied intercept", "reliability": "high", "valid": false, "content": "A translated order with a reference number and signature block says Ridge approved the outage."},
+          {"id": "G03", "source": "Commercial threat intelligence", "reliability": "medium", "valid": true, "content": "The command server was leased through an access broker used by extortion crews."}
+        ],
+        "b": [
+          {"id": "B03", "source": "Ridge foreign ministry", "reliability": "high", "valid": true, "content": "The published document uses an obsolete Ridge directorate name and a classification marking Ridge does not use."}
+        ],
+        "mediator": [
+          {"id": "M02", "source": "Allied liaison office", "reliability": "high", "valid": true, "content": "The office can authenticate the published reference number and signature if formally asked."}
+        ]
+      }
+    },
+    {
+      "round": 3,
+      "clock": "20:00 | Prime-time statements due",
+      "public_event": "A second ransom message threatens another outage by morning. Harbor must decide whether to blame Ridge tonight. Ridge must decide whether to tie further cooperation to postponement of the basing vote.",
+      "base_escalation_delta": 4,
+      "base_harm_delta": 1,
+      "base_cost_delta": 3,
+      "evidence": {
+        "a": [
+          {"id": "G08", "source": "Vendor identity logs", "reliability": "high", "valid": true, "content": "The maintenance credential was stolen and advertised on a criminal access market 19 days before the outage."},
+          {"id": "G09", "source": "Financial intelligence unit", "reliability": "high", "valid": true, "content": "The ransom wallet belongs to a cluster used in two confirmed extortion cases with no known state ties."}
+        ],
+        "b": [
+          {"id": "B04", "source": "Ridge cyber center", "reliability": "medium", "valid": true, "content": "Ridge has seen the same loader in two criminal credential-theft cases."}
+        ],
+        "mediator": [
+          {"id": "M03", "source": "Regional incident exchange", "reliability": "medium", "valid": true, "content": "Two utilities outside Harbor saw the same loader after credentials were sold on the same access market."}
+        ]
+      }
+    }
+  ],
+  "verification_results": {
+    "G01": {"valid": true, "source": "Independent grid engineers", "content": "The vendor account path and breaker commands are authentic."},
+    "G02": {"valid": true, "source": "Independent malware laboratory", "content": "The code match exists but is not unique to Ridge and cannot support attribution by itself."},
+    "G06-P": {"valid": false, "source": "Allied duty officer", "content": "The intercept is forged. Its reference number belongs to a travel notice and the signature does not verify."},
+    "G03": {"valid": true, "source": "Infrastructure provider", "content": "The server lease and access-broker history are confirmed."},
+    "G08": {"valid": true, "source": "Vendor and market records", "content": "The credential theft and market listing are confirmed."},
+    "G09": {"valid": true, "source": "Financial intelligence unit", "content": "The wallet cluster link to prior extortion cases is confirmed."},
+    "B01": {"valid": true, "source": "Regional intelligence review", "content": "Available collection shows no Ridge tasking for a grid operation."},
+    "B03": {"valid": true, "source": "Allied document specialists", "content": "The directorate name and classification marks are inconsistent with authentic Ridge documents."}
+  },
+  "ground_truth": {
+    "responsible_actor": "nonstate",
+    "note": "A criminal extortion group bought the vendor credential, caused the outage, and planted G06-P to provoke a false state attribution.",
+    "forged_evidence_ids": ["G06-P"],
+    "decisive_evidence_ids": ["G08", "G09"]
+  }
+}
+

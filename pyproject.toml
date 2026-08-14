@@ -1,0 +1,31 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "third-chair"
+version = "0.3.0"
+description = "A rotating model tournament for cyber-crisis mediation"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "Bryon Miller" }]
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "jsonschema>=4.0", "ruff>=0.6"]
+documents = ["python-docx==1.2.0"]
+
+[project.scripts]
+third-chair = "third_chair.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/third_chair"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests_py"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
