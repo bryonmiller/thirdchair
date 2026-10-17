@@ -8,8 +8,20 @@
       "temperature": 0.2,
       "extra_headers": {
         "HTTP-Referer": "https://github.com/bryonmiller/thirdchair",
-        "X-Title": "Third Chair"
-      }
+        "X-OpenRouter-Title": "Third Chair",
+        "X-OpenRouter-Metadata": "enabled"
+      },
+      "max_tokens": 4096,
+      "send_seed": false,
+      "timeout": 180,
+      "provider": {
+        "only": [
+          "replace-with-exact-provider-endpoint-slug"
+        ],
+        "allow_fallbacks": false,
+        "require_parameters": true
+      },
+      "reasoning": null
     },
     {
       "label": "model-b",
@@ -19,8 +31,20 @@
       "temperature": 0.2,
       "extra_headers": {
         "HTTP-Referer": "https://github.com/bryonmiller/thirdchair",
-        "X-Title": "Third Chair"
-      }
+        "X-OpenRouter-Title": "Third Chair",
+        "X-OpenRouter-Metadata": "enabled"
+      },
+      "max_tokens": 4096,
+      "send_seed": false,
+      "timeout": 180,
+      "provider": {
+        "only": [
+          "replace-with-exact-provider-endpoint-slug"
+        ],
+        "allow_fallbacks": false,
+        "require_parameters": true
+      },
+      "reasoning": null
     },
     {
       "label": "model-c",
@@ -30,8 +54,20 @@
       "temperature": 0.2,
       "extra_headers": {
         "HTTP-Referer": "https://github.com/bryonmiller/thirdchair",
-        "X-Title": "Third Chair"
-      }
+        "X-OpenRouter-Title": "Third Chair",
+        "X-OpenRouter-Metadata": "enabled"
+      },
+      "max_tokens": 4096,
+      "send_seed": false,
+      "timeout": 180,
+      "provider": {
+        "only": [
+          "replace-with-exact-provider-endpoint-slug"
+        ],
+        "allow_fallbacks": false,
+        "require_parameters": true
+      },
+      "reasoning": null
     }
   ]
 }

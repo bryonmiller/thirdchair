@@ -22,7 +22,7 @@ cp eval_data/models.example.json eval_data/models.json
 
 Replace all three placeholders with exact model IDs. Give each one a short, stable label. Keep API keys in environment variables. The configuration names those variables but never stores the keys.
 
-The primary runner uses OpenAI-compatible chat-completion endpoints. OpenRouter is the simplest way to run model families from different providers through one protocol, but any compatible endpoint can be used.
+The primary runner uses OpenAI-compatible chat-completion endpoints. OpenRouter can run model families from different providers through one protocol, but any compatible endpoint can be used. For OpenRouter, follow the [pilot setup guide](openrouter_pilot.md): replace provider endpoint placeholders, check supported sampling/reasoning parameters, and run `third-chair check-config --models eval_data/models.json` before spending credits. An offline pass does not verify live availability.
 
 ## 3. Inspect the schedule
 
@@ -59,7 +59,8 @@ Inspect every response. Confirm that:
 - no private reason leaked into a later prompt;
 - the mediator verified only evidence it had seen cited;
 - private messages reached only the intended state;
-- the provider returned the expected model ID; and
+- the provider returned the expected model ID and provider metadata;
+- the finish reason is `stop` and usage leaves enough tokens for the JSON output; and
 - the engine state changed in the expected direction.
 
 Delete or clearly label the smoke file before reporting pilot results. Do not mix a setup run with the preregistered batch.
@@ -117,7 +118,8 @@ Choose any confirmatory sample size from pilot variance, the effect or precision
 
 - Raw JSONL is present and readable.
 - Every public number can be recomputed from that file.
-- Requested and returned model IDs are shown.
+- Requested and returned model IDs and reported providers are shown.
+- Provider routing, token/reasoning budgets and omitted sampling parameters are recorded.
 - Failed matches remain visible.
 - No fixture or hand-written transcript appears in results.
 - Model settings and run date are stated.

@@ -4,14 +4,15 @@ from __future__ import annotations
 
 import itertools
 import json
+import math
 import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterable
 
-from .client import OpenAICompatibleClient
+from .client import OpenAICompatibleClient, is_openrouter
 from .runner import ModelSeat, run_match
-from .provenance import fingerprint, pair_identity, run_manifest, seat_config, source_digest
+from .provenance import MAX_TOKENS, fingerprint, pair_identity, run_manifest, seat_config, source_digest
 from .scenario import load_scenario
 
 
@@ -21,31 +22,139 @@ class ModelConfig:
     base_url: str
     model: str
     api_key_env: str
-    temperature: float
+    temperature: float | None
     extra_headers: dict[str, str]
+    max_tokens: int = MAX_TOKENS
+    send_seed: bool = True
+    timeout: int = 180
+    provider: dict[str, Any] | None = None
+    reasoning: dict[str, Any] | None = None
+
+
+def _positive_int(value: Any, name: str) -> None:
+    if type(value) is not int or value < 1:
+        raise ValueError(f"{name} must be a positive integer")
+
+
+def _validate_model_config(item: dict[str, Any]) -> None:
+    if not isinstance(item, dict):
+        raise ValueError("Each model configuration must be an object")
+    unknown = set(item) - set(ModelConfig.__dataclass_fields__)
+    if unknown:
+        raise ValueError(f"Unknown model configuration fields: {', '.join(sorted(unknown))}")
+    for name in ("label", "base_url", "model", "api_key_env"):
+        if not isinstance(item.get(name), str) or not item[name].strip():
+            raise ValueError(f"{name} must be a non-empty string")
+    temperature = item.get("temperature", 0.2)
+    if temperature is not None and (
+        type(temperature) not in {int, float} or not math.isfinite(temperature)
+        or not 0 <= temperature <= 2
+    ):
+        raise ValueError("temperature must be null or a finite number from 0 to 2")
+    _positive_int(item.get("max_tokens", MAX_TOKENS), "max_tokens")
+    _positive_int(item.get("timeout", 180), "timeout")
+    if type(item.get("send_seed", True)) is not bool:
+        raise ValueError("send_seed must be a boolean")
+    headers = item.get("extra_headers", {})
+    if not isinstance(headers, dict) or not all(
+        isinstance(k, str) and isinstance(v, str) for k, v in headers.items()
+    ):
+        raise ValueError("extra_headers must map strings to strings")
+    provider = item.get("provider")
+    if provider is not None:
+        if not isinstance(provider, dict) or set(provider) - {
+            "only", "order", "allow_fallbacks", "require_parameters"
+        }:
+            raise ValueError("provider supports only, order, allow_fallbacks and require_parameters")
+        for name in ("only", "order"):
+            if name in provider and (
+                not isinstance(provider[name], list) or not provider[name]
+                or not all(isinstance(v, str) and v.strip() for v in provider[name])
+                or len(set(provider[name])) != len(provider[name])
+            ):
+                raise ValueError(f"provider.{name} must be a non-empty list of unique slugs")
+        for name in ("allow_fallbacks", "require_parameters"):
+            if name in provider and type(provider[name]) is not bool:
+                raise ValueError(f"provider.{name} must be a boolean")
+    reasoning = item.get("reasoning")
+    if reasoning is not None:
+        if not isinstance(reasoning, dict) or set(reasoning) - {"effort", "max_tokens", "enabled", "exclude"}:
+            raise ValueError("reasoning supports effort, max_tokens, enabled and exclude")
+        for name in ("enabled", "exclude"):
+            if name in reasoning and type(reasoning[name]) is not bool:
+                raise ValueError(f"reasoning.{name} must be a boolean")
+        if "effort" in reasoning and reasoning["effort"] not in (
+            "none", "minimal", "low", "medium", "high", "xhigh", "max"
+        ):
+            raise ValueError("Unknown reasoning.effort")
+        if "effort" in reasoning and "max_tokens" in reasoning:
+            raise ValueError("Use reasoning.effort or reasoning.max_tokens, not both")
+        if "max_tokens" in reasoning:
+            _positive_int(reasoning["max_tokens"], "reasoning.max_tokens")
+            if reasoning["max_tokens"] >= item.get("max_tokens", MAX_TOKENS):
+                raise ValueError("max_tokens must exceed reasoning.max_tokens to leave output room")
+        if reasoning.get("enabled") is False and (
+            "max_tokens" in reasoning or reasoning.get("effort", "none") != "none"
+        ):
+            raise ValueError("Disabled reasoning conflicts with the requested reasoning budget")
 
 
 def load_model_configs(path: str | Path) -> list[ModelConfig]:
     data = json.loads(Path(path).read_text(encoding="utf-8"))
+    if not isinstance(data, dict) or set(data) != {"models"}:
+        raise ValueError("Model configuration must be an object containing only models")
     raw_models = data.get("models")
     if not isinstance(raw_models, list) or len(raw_models) < 3:
         raise ValueError("The tournament requires at least three configured models")
     configs: list[ModelConfig] = []
     for item in raw_models:
+        _validate_model_config(item)
         configs.append(
             ModelConfig(
                 label=str(item["label"]),
                 base_url=str(item["base_url"]),
                 model=str(item["model"]),
                 api_key_env=str(item["api_key_env"]),
-                temperature=float(item.get("temperature", 0.2)),
+                temperature=item.get("temperature", 0.2),
                 extra_headers=dict(item.get("extra_headers") or {}),
+                max_tokens=item.get("max_tokens", MAX_TOKENS),
+                send_seed=item.get("send_seed", True),
+                timeout=item.get("timeout", 180),
+                provider=item.get("provider"),
+                reasoning=item.get("reasoning"),
             )
         )
     labels = [item.label for item in configs]
     if len(labels) != len(set(labels)):
         raise ValueError("Model labels must be unique")
     return configs
+
+
+def configuration_issues(configs: list[ModelConfig]) -> list[str]:
+    """Offline checks only: live availability and parameter support need a smoke run."""
+    issues = []
+    for config in configs:
+        if "replace-with" in config.model.lower():
+            issues.append(f"{config.label}: replace the placeholder with an exact model ID")
+        if not os.environ.get(config.api_key_env):
+            issues.append(f"{config.label}: environment variable {config.api_key_env} is not set")
+        if is_openrouter(config.base_url):
+            provider = config.provider or {}
+            only = provider.get("only", [])
+            if len(only) != 1 or any("replace-with" in slug.lower() for slug in only):
+                issues.append(f"{config.label}: pin one provider endpoint with provider.only")
+            if provider.get("allow_fallbacks") is not False:
+                issues.append(f"{config.label}: set provider.allow_fallbacks to false")
+            if provider.get("require_parameters") is not True:
+                issues.append(f"{config.label}: set provider.require_parameters to true")
+            if config.model.startswith("openrouter/") or any(
+                token in config.model.lower() for token in (":nitro", ":floor", ":free", "latest")
+            ):
+                issues.append(f"{config.label}: use a fixed model ID without an automatic routing alias")
+            if any(name.lower() == "x-openrouter-metadata" and value.lower() != "enabled"
+                   for name, value in config.extra_headers.items()):
+                issues.append(f"{config.label}: X-OpenRouter-Metadata must be enabled")
+    return issues
 
 
 def build_model_seats(configs: list[ModelConfig]) -> dict[str, ModelSeat]:
@@ -61,8 +170,13 @@ def build_model_seats(configs: list[ModelConfig]) -> dict[str, ModelSeat]:
                 api_key=api_key,
                 model=config.model,
                 extra_headers=config.extra_headers,
+                provider=config.provider,
+                reasoning=config.reasoning,
+                timeout=config.timeout,
             ),
             temperature=config.temperature,
+            max_tokens=config.max_tokens,
+            send_seed=config.send_seed,
         )
     return seats
 

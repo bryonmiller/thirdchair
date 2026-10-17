@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.4.1 - 2026-10-17
+
+OpenRouter controls for an exploratory live-model pilot. No live-provider trials were run to validate this release; HTTP integration tests use simulated responses. Crisis dynamics and scoring remain `baseline-0.4.0`.
+
+- Configure provider allowlists/fallbacks, parameter enforcement, per-model token and reasoning budgets, optional temperature/seed, and timeout. Reject misspelled or invalid settings.
+- Add a free `check-config` command. The run command rejects missing credentials, placeholders and uncontrolled OpenRouter routing before any paid call.
+- Record exact request payloads, requested provider/reasoning settings, returned provider identity, missing provider metadata and completion finish reasons. Request OpenRouter routing metadata by default.
+- Exclude mixed model/provider identities, missing required provider metadata and actor-provider mismatches from comparisons; separate mediator provider cohorts.
+- Stop empty, truncated or blocked responses without a JSON-repair retry, retaining their raw response and usage.
+- Add regression coverage and an OpenRouter pilot guide with an explicit live-validation gate.
+
+Migration: use a new output file and keep 0.4.1 runs separate from 0.4.0. The OpenRouter example now requires exact provider endpoint slugs as well as model IDs. Generic endpoint configurations retain previous defaults.
+
 ## 0.4.0 - 2026-10-17
 
 Audited descriptive baseline. No empirical model data informed these changes and no trained policy is included.
