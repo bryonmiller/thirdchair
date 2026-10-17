@@ -11,6 +11,7 @@ from typing import Any, Iterable
 
 from .client import OpenAICompatibleClient
 from .runner import ModelSeat, run_match
+from .provenance import fingerprint, pair_identity, run_manifest, seat_config, source_digest
 from .scenario import load_scenario
 
 
@@ -90,14 +91,31 @@ def build_schedule(
     modes: list[str],
     repetitions: int,
     seed: int | None,
+    fixed_a: str | None = None,
+    fixed_b: str | None = None,
 ) -> list[dict[str, Any]]:
-    if not modes or not set(modes) <= {"active", "empty"}:
+    if repetitions < 1:
+        raise ValueError("repetitions must be at least one")
+    if len(labels) != len(set(labels)) or len(labels) < 3:
+        raise ValueError("Use at least three distinct model labels")
+    if bool(fixed_a) != bool(fixed_b):
+        raise ValueError("Specify both fixed actor labels")
+    if fixed_a and (fixed_a not in labels or fixed_b not in labels):
+        raise ValueError("Fixed actors must be configured model labels")
+    if not modes or len(modes) != len(set(modes)) or not set(modes) <= {"active", "empty"}:
         raise ValueError("modes must contain active, empty, or both")
     schedule: list[dict[str, Any]] = []
     paths = [Path(path) for path in scenario_paths]
+    if not paths or len({p.resolve() for p in paths}) != len(paths):
+        raise ValueError("Use a non-empty list of distinct scenario paths")
+    scenario_ids: set[str] = set()
     for scenario_index, scenario_path in enumerate(paths):
         scenario = load_scenario(scenario_path)
-        role_sets = assignments(labels, rotation, reverse=bool(scenario_index % 2))
+        if scenario["id"] in scenario_ids:
+            raise ValueError("Scenario IDs must be unique within a schedule")
+        scenario_ids.add(scenario["id"])
+        role_sets = ([(fixed_a, fixed_b, label) for label in sorted(labels)] if fixed_a else
+                     assignments(labels, rotation, reverse=bool(scenario_index % 2)))
         for repetition in range(1, repetitions + 1):
             for assignment_index, (a, b, mediator) in enumerate(role_sets):
                 pair_seed = (
@@ -106,18 +124,21 @@ def build_schedule(
                     else seed
                     + scenario_index * 1_000_000
                     + repetition * 10_000
-                    + assignment_index * 100
+                    + (0 if fixed_a else assignment_index) * 100
                 )
                 for mode in modes:
+                    identity = fingerprint({"scenario": scenario, "seed": pair_seed,
+                                            "roles": [a, b, mediator], "repetition": repetition})
                     match_id = (
                         f"{scenario['id']}__a-{a}__b-{b}__m-{mediator}__"
-                        f"r{repetition:02d}__{mode}"
+                        f"r{repetition:02d}__{identity[:16]}__{mode}"
                     )
                     schedule.append(
                         {
                             "match_id": match_id,
                             "scenario_path": scenario_path,
                             "scenario_id": scenario["id"],
+                            "scenario_sha256": fingerprint(scenario),
                             "rounds": int(scenario["rounds"]),
                             "a": a,
                             "b": b,
@@ -138,43 +159,78 @@ def estimate_calls(schedule: list[dict[str, Any]]) -> int:
     return total
 
 
-def _existing_match_ids(path: Path) -> set[str]:
+def _read_jsonl(path: Path) -> list[dict[str, Any]]:
     if not path.exists():
-        return set()
-    result: set[str] = set()
-    for line in path.read_text(encoding="utf-8").splitlines():
+        return []
+    records = []
+    for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
         if line.strip():
-            value = json.loads(line)
-            if value.get("match_id"):
-                result.add(value["match_id"])
-    return result
+            try:
+                records.append(json.loads(line))
+            except json.JSONDecodeError as exc:
+                raise ValueError(f"Incomplete JSONL at {path}:{number}; preserve it and use a new output") from exc
+    return records
+
+
+def _append_jsonl(path: Path, value: dict[str, Any]) -> None:
+    with path.open("a", encoding="utf-8") as handle:
+        handle.write(json.dumps(value, sort_keys=True, allow_nan=False) + "\n")
+        handle.flush()
+        os.fsync(handle.fileno())
 
 
 def run_schedule(
-    *,
-    schedule: list[dict[str, Any]],
-    model_seats: dict[str, ModelSeat],
+    *, schedule: list[dict[str, Any]], model_seats: dict[str, ModelSeat],
     output: str | Path,
 ) -> None:
     output_path = Path(output)
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    completed = _existing_match_ids(output_path)
-    remaining = [item for item in schedule if item["match_id"] not in completed]
-    for index, item in enumerate(remaining, 1):
-        print(
-            f"[{index}/{len(remaining)}] {item['scenario_id']} | {item['mode']} | "
-            f"A={item['a']} B={item['b']} M={item['mediator']}"
-        )
-        record = run_match(
-            scenario_path=item["scenario_path"],
-            model_a=model_seats[item["a"]],
-            model_b=model_seats[item["b"]],
-            mediator_model=model_seats[item["mediator"]],
-            mode=item["mode"],
-            repetition=item["repetition"],
-            seed=item["seed"],
-        )
-        record["match_id"] = item["match_id"]
-        with output_path.open("a", encoding="utf-8") as handle:
-            handle.write(json.dumps(record, sort_keys=True) + "\n")
+    events_path = output_path.with_suffix(output_path.suffix + ".events.jsonl")
+    existing = _read_jsonl(output_path)
+    completed: set[str] = set()
+    source_hash = source_digest()
+    for record in existing:
+        if record.get("run_status") not in {"succeeded", "failed"}:
+            raise ValueError("Output contains an unfinished match; preserve it and use a new output")
+        manifest = record.get("manifest")
+        if not manifest or manifest.get("source_sha256") != source_hash:
+            raise ValueError("Output has missing/incompatible provenance; use a new output path")
+        for role in ("a", "b", "mediator"):
+            previous = manifest["roles"][role]
+            label = previous["label"]
+            if label not in model_seats or previous != seat_config(model_seats[label]):
+                raise ValueError("Model configuration changed; use a new output path")
+        match_id = record.get("match_id")
+        if not match_id or match_id in completed:
+            raise ValueError("Output has missing or duplicate match IDs")
+        completed.add(match_id)
+    interrupted = {event["match_id"] for event in _read_jsonl(events_path)} - completed
+    if interrupted:
+        raise ValueError("Interrupted calls exist in the event journal; preserve them and use a new output/repetition")
 
+    bound = []
+    for item in schedule:
+        scenario = load_scenario(item["scenario_path"])
+        if fingerprint(scenario) != item["scenario_sha256"]:
+            raise ValueError("Scenario changed after planning; rebuild the schedule")
+        manifest = run_manifest(scenario, {role: model_seats[item[role]] for role in ("a", "b", "mediator")})
+        for previous in existing:
+            if previous["scenario_id"] == item["scenario_id"] and previous["manifest"]["scenario_sha256"] != manifest["scenario_sha256"]:
+                raise ValueError("Scenario changed; use a new output path")
+        match_id = f"{pair_identity(manifest, item['repetition'], item['seed'])}__{item['mode']}"
+        bound.append(item | {"match_id": match_id})
+    if len({item["match_id"] for item in bound}) != len(bound):
+        raise ValueError("Schedule contains duplicate match identities")
+    remaining = [item for item in bound if item["match_id"] not in completed]
+    for index, item in enumerate(remaining, 1):
+        print(f"[{index}/{len(remaining)}] {item['scenario_id']} | {item['mode']} | "
+              f"A={item['a']} B={item['b']} M={item['mediator']}")
+        record = run_match(
+            scenario_path=item["scenario_path"], model_a=model_seats[item["a"]],
+            model_b=model_seats[item["b"]], mediator_model=model_seats[item["mediator"]],
+            mode=item["mode"], repetition=item["repetition"], seed=item["seed"],
+            event_sink=lambda event: _append_jsonl(events_path, event),
+        )
+        if record["match_id"] != item["match_id"]:
+            raise RuntimeError("Configuration changed during execution; inspect the event journal")
+        _append_jsonl(output_path, record)

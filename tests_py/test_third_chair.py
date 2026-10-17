@@ -23,6 +23,7 @@ def actor_intent(belief: int, posture: str, evidence_ids: list[str]) -> dict:
         "public_message": "We will keep our response tied to evidence and reversible options.",
         "private_reason": "The evidence remains incomplete and an early irreversible step could backfire.",
         "evidence_ids": evidence_ids,
+        "evidence_stances": {item: "support" for item in evidence_ids},
     }
 
 
@@ -35,6 +36,7 @@ def actor_final(
         "accepts_intervention": accepts,
         "public_message": "We will use the hotline and continue checking the disputed evidence.",
         "evidence_ids": evidence_ids,
+        "evidence_stances": {item: "support" for item in evidence_ids},
     }
 
 
@@ -153,6 +155,7 @@ class ThirdChairTests(unittest.TestCase):
             mode="active",
             repetition=1,
             seed=100,
+            evidence_id_mode="original",
         )
         self.assertEqual(record["run_status"], "succeeded", record.get("error"))
         self.assertEqual(len(record["rounds"]), 3)

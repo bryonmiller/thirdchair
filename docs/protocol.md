@@ -1,4 +1,4 @@
-# Protocol
+# Protocol: audited baseline 0.4.0
 
 ## Research question
 
@@ -83,7 +83,7 @@ The pilot temperature is 0.2 unless a model configuration states otherwise. A ba
 
 Some providers ignore seeds. A seed is therefore an audit field and a pairing aid, not a guarantee of identical sampling.
 
-The first pilot uses one repetition. It is a debugging and effect-discovery pass. Comparative claims should use at least three repetitions after the transcripts and scoring weights are reviewed.
+The first pilot uses one repetition. It is a debugging and effect-discovery pass. Additional repetitions require pilot-based planning. Rotation does not isolate mediator ability from opponent configuration; use the fixed-actor design for that comparison.
 
 ## Response validation
 
@@ -98,7 +98,7 @@ Mediation lift is the empty-chair crisis cost minus the active-mediator crisis c
 ## Secondary outcomes
 
 - truth-score difference between active and empty conditions;
-- false peace introduced by the mediator;
+- absolute active/control false-peace rates and newly introduced failures;
 - critical escalation prevented;
 - active critical-escalation rate;
 - lift per intervention;
@@ -109,7 +109,7 @@ Mediation lift is the empty-chair crisis cost minus the active-mediator crisis c
 
 ## Analysis
 
-Report results by scenario, state-model pairing, mediator, and repetition before any overall average. For each mediator, report median and mean lift, paired win rate, truth score, false-peace rate, critical-escalation rate, and mean lift per intervention.
+Report results by scenario, state-model pairing, mediator, and repetition before any overall average. For each mediator, report median and mean lift, positive-lift rate, false-peace-gated win rate, Brier score, legacy truth score, false-peace rate, critical-escalation rate, and mean lift per intervention.
 
 The project does not declare a winner from mediation lift alone. A mediator with a high false-peace rate fails the central design requirement even if it lowers crisis cost.
 
@@ -130,3 +130,5 @@ Every result must identify:
 
 Fixtures, hand-written examples, and scripted outputs are allowed for tests but never appear in the pilot results.
 
+
+Version 0.4.0 uses opaque runtime evidence IDs and requires support/reject/uncertain stances for cited items. Its scoring and prompts are incompatible with 0.3.0. See [the current preregistration](preregistration.md) for analysis limits and [the repair record](audit_repairs.md) for migration details.

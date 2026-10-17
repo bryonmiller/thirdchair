@@ -6,7 +6,7 @@ import json
 import time
 import urllib.error
 import urllib.request
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 
@@ -16,6 +16,7 @@ class ModelResponse:
     returned_model: str | None
     usage: dict[str, Any]
     raw: dict[str, Any]
+    transport_attempts: list[dict[str, Any]] = field(default_factory=list)
 
 
 class OpenAICompatibleClient:
@@ -34,6 +35,7 @@ class OpenAICompatibleClient:
         self.model = model
         self.timeout = timeout
         self.extra_headers = extra_headers or {}
+        self.last_attempts: list[dict[str, Any]] = []
 
     def chat(
         self,
@@ -58,12 +60,15 @@ class OpenAICompatibleClient:
             "Content-Type": "application/json",
             **self.extra_headers,
         }
-        last_error: Exception | None = None
+        self.last_attempts = []
         for attempt in range(4):
+            event: dict[str, Any] = {"attempt": attempt + 1}
+            self.last_attempts.append(event)
             request = urllib.request.Request(self.url, data=body, headers=headers, method="POST")
             try:
                 with urllib.request.urlopen(request, timeout=self.timeout) as response:
                     decoded = json.loads(response.read().decode("utf-8"))
+                event["status"] = "succeeded"
                 message_content = decoded["choices"][0]["message"]["content"]
                 if isinstance(message_content, list):
                     message_content = "".join(
@@ -76,17 +81,19 @@ class OpenAICompatibleClient:
                     returned_model=decoded.get("model"),
                     usage=decoded.get("usage") or {},
                     raw=decoded,
+                    transport_attempts=list(self.last_attempts),
                 )
             except urllib.error.HTTPError as exc:
-                last_error = exc
+                event.update(status="http_error", http_status=exc.code)
                 if exc.code not in {408, 409, 429, 500, 502, 503, 504}:
-                    detail = exc.read().decode("utf-8", errors="replace")[:500]
-                    raise RuntimeError(
-                        f"Model request failed with HTTP {exc.code}: {detail}"
-                    ) from exc
+                    # Error bodies/URLs can echo credentials. Keep the status, not the body.
+                    raise RuntimeError(f"Model request failed with HTTP {exc.code}") from exc
             except (urllib.error.URLError, TimeoutError) as exc:
-                last_error = exc
+                event.update(status="transport_error", error_type=type(exc).__name__)
+            except (ValueError, KeyError, IndexError, TypeError) as exc:
+                event.update(status="invalid_provider_response", error_type=type(exc).__name__)
+                raise RuntimeError("Invalid provider response envelope") from exc
             if attempt < 3:
                 time.sleep(2**attempt)
-        raise RuntimeError(f"Model request failed after retries: {last_error}")
+        raise RuntimeError("Model request failed after four transport attempts")
 

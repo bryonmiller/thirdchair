@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import hashlib
 import json
+import argparse
+import shutil
 from pathlib import Path
 from zipfile import ZIP_DEFLATED, ZipFile, ZipInfo
 
@@ -57,15 +59,17 @@ def include(path: Path) -> bool:
         relative = path.relative_to(ROOT).as_posix()
     except ValueError:
         return False
+    if path.is_symlink():
+        return False
     if relative in EXCLUDED_RELATIVE:
         return False
     if any(part in EXCLUDED_NAMES for part in path.parts):
         return False
     if path.suffix in EXCLUDED_SUFFIXES:
         return False
-    if path.name == "models.json":
+    if path.name == "models.json" or path.name == ".env" or path.name.startswith(".env."):
         return False
-    if path.parent.name == "results" and path.name != "README.md":
+    if relative.startswith("results/") and relative != "results/README.md":
         return False
     return path.is_file()
 
@@ -104,11 +108,11 @@ def sha256(path: Path) -> str:
 def build_manifest(files: list[Path]) -> Path:
     manifest = {
         "project": "The Third Chair",
-        "version": "0.3.0",
+        "version": "0.4.0",
         "author": "Bryon Miller",
-        "research_status": "Tournament package complete; comparative model pilot not yet run",
-        "intended_repository": "https://github.com/bryonmiller/third-chair",
-        "intended_microsite": "https://bryonmiller.github.io/third-chair/",
+        "research_status": "Audited descriptive baseline; comparative pilot and RL environment not run",
+        "intended_repository": "https://github.com/bryonmiller/thirdchair",
+        "intended_microsite": "https://thirdchair.bryonmiller.com",
         "files": [
             {"name": path.name, "bytes": path.stat().st_size, "sha256": sha256(path)}
             for path in sorted(files, key=lambda item: item.name)
@@ -138,14 +142,13 @@ def write_readme() -> Path:
     destination = OUTPUT / "README-FIRST.txt"
     destination.write_text(
         "THE THIRD CHAIR\n"
-        "ChinaTalk evaluation handoff | Bryon Miller | August 2026\n\n"
+        "Audited baseline | Bryon Miller | October 2026\n\n"
         "START HERE\n"
-        "1. Read third-chair-brief.pdf for the one-page concept.\n"
-        "2. Read third-chair-proposal.pdf for the complete research design.\n"
-        "3. Unzip third-chair-source.zip to inspect or run the tournament.\n"
-        "4. Use third-chair-submission.pdf when completing the contest form.\n\n"
+        "1. Unzip third-chair-source.zip and read README.md.\n"
+        "2. Read docs/audit_repairs.md and docs/preregistration.md for current limits.\n"
+        "3. The PDF contest documents are archived August 2026 material.\n\n"
         "STATUS\n"
-        "The scenarios, engine, matched empty-chair control, scoring, tests, and sites are complete. "
+        "Execution and reporting repairs are tested locally. Research validity remains limited. "
         "Comparative model results require configured provider API access and are not simulated here.\n\n"
         "QUICK RUN\n"
         "python -m pip install -e .\n"
@@ -160,7 +163,17 @@ def write_readme() -> Path:
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--source-only", action="store_true", help="Build the site ZIP without document dependencies")
+    args = parser.parse_args()
     OUTPUT.mkdir(parents=True, exist_ok=True)
+    if args.source_only:
+        source = build_source()
+        site_zip = ROOT / "site" / "downloads" / SOURCE_NAME
+        site_zip.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(source, site_zip)
+        print(f"{site_zip.relative_to(ROOT)}\t{sha256(site_zip)}")
+        return
     readme = write_readme()
     source = build_source()
     standalone = [

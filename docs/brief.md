@@ -1,5 +1,7 @@
 # The Third Chair
 
+> Archived August 2026 contest material. For the repaired baseline and current limitations, see [audit repairs](audit_repairs.md) and [the current protocol](preregistration.md).
+
 ## One-page evaluation brief
 
 **The test:** Two models play rival governments during a cyber crisis. A third gets two chances to keep them from escalating without rewarding a lie, then all three swap seats.

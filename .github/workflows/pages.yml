@@ -22,6 +22,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Test and build the reviewed source download
+        env:
+          PYTHONPATH: src
+        run: |
+          python -m unittest discover -s tests_py -v
+          python scripts/validate_project.py
+          python scripts/build_release.py --source-only
+          python scripts/validate_static_site.py
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
