@@ -4,7 +4,7 @@ Two models play rival governments during a cyber crisis. A third gets two chance
 
 This is a runnable evaluation for the ChinaTalk Evals for the Situation Room contest. It puts models in a competitive, multi-turn setting with private information, public pressure, forged evidence, and actions that change the next round.
 
-**Version 0.4.0 is a repaired descriptive baseline.** No empirical model results or trained policies are included. Context handling, evidence stances, logging, pairing and safety summaries have regression tests. The consequence model still favors restraint and is not suitable for RL training or broad claims about diplomatic competence.
+**Version 0.4.1 adds controlled OpenRouter configuration to the repaired descriptive baseline.** No empirical model results or trained policies are included. Context handling, evidence stances, logging, pairing and safety summaries have regression tests. The consequence model still favors restraint and is not suitable for RL training or broad claims about diplomatic competence.
 
 Start with [audit repairs and remaining limits](docs/audit_repairs.md), the [current pilot protocol](docs/preregistration.md), and the [bounded research roadmap](docs/research_roadmap.md). The original [0.3.0 source snapshot](https://github.com/bryonmiller/thirdchair/tree/757334b77d2aa3dd110f490897775a26fdcb929a) and [protocol](docs/legacy/preregistration-0.3.0.md) remain identifiable. Scores and response schemas changed; do not pool the versions.
 
@@ -56,7 +56,7 @@ cp eval_data/models.example.json eval_data/models.json
 third-chair plan --models eval_data/models.json
 ```
 
-The example configuration contains three placeholders. Replace them with exact model IDs and set the named API key environment variable. Do not place an API key in the JSON file.
+The example configuration contains placeholders for three model IDs and their provider endpoint slugs. Replace them and set the named API key environment variable. Do not place an API key in the JSON file. Run `third-chair check-config --models eval_data/models.json` before using credits; it checks local settings without calling a provider. Follow the [OpenRouter pilot guide](docs/openrouter_pilot.md) for parameter support, token/reasoning budgets and the six-match smoke schedule.
 
 The default balanced pilot has 18 matches and 243 planned model turns before validation retries. The full seat swap has 36 matches and 486 planned turns.
 
@@ -89,7 +89,9 @@ third-chair run --models eval_data/models.json --actor-a model-a --actor-b model
   --output results/fixed-actors.jsonl
 ```
 
-Every configured model is a mediator candidate, including models also used in a state seat. Calls have separate role contexts. The same seed is used across mediator candidates, but independent API executions do not guarantee identical intentions. Forked controls are a future extension.
+Every configured model is a mediator candidate, including models also used in a state seat. Calls have separate role contexts. The same experiment seed is used across mediator candidates. Set `send_seed: false` to omit an unsupported API seed without changing scenario randomization. Independent API executions do not guarantee identical intentions. Forked controls are a future extension.
+
+OpenRouter runs require one `provider.only` entry, disabled provider fallbacks, and `require_parameters: true`. Settings and exact request payloads are recorded. Summaries exclude matches with changing model/provider identity or missing required provider metadata, and exclude pairs whose actor providers differ. Empty or non-stop completions retain usage and raw responses but are not scored or automatically retried as JSON mistakes. Use a new output path after changing any settings or upgrading the source; do not pool 0.4.0 and 0.4.1 records.
 
 ## Measures
 

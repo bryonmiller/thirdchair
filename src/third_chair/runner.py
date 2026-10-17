@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any, Callable, Protocol
 
 from . import __version__
+from .client import chat_payload
 from .engine import resolve_round, score_match
 from .provenance import MAX_TOKENS, pair_identity, run_manifest
 from .scenario import CrisisState, evidence_text, load_scenario, opaque_evidence_ids
@@ -29,7 +30,7 @@ class ChatClient(Protocol):
         self,
         messages: list[dict[str, str]],
         *,
-        temperature: float,
+        temperature: float | None,
         max_tokens: int,
         seed: int | None,
     ) -> Any: ...
@@ -39,7 +40,9 @@ class ChatClient(Protocol):
 class ModelSeat:
     label: str
     client: ChatClient
-    temperature: float = 0.2
+    temperature: float | None = 0.2
+    max_tokens: int = MAX_TOKENS
+    send_seed: bool = True
 
 
 class ScorableResponseError(ValueError):
@@ -62,20 +65,20 @@ def _call_for_json(
         attempt: dict[str, Any] = {
             "attempt": attempt_number,
             "status": "started",
-            "request": {
-                "messages": copy.deepcopy(working_messages),
-                "model": model.client.model,
-                "temperature": model.temperature,
-                "max_tokens": MAX_TOKENS,
-                "seed": seed,
-            },
+            "request": chat_payload(
+                messages=working_messages, model=model.client.model,
+                temperature=model.temperature, max_tokens=model.max_tokens,
+                seed=seed if model.send_seed else None,
+                provider=getattr(model.client, "provider", None),
+                reasoning=getattr(model.client, "reasoning", None),
+            ),
         }
         attempts.append(attempt)
         event_sink(attempt)
         try:
             response = model.client.chat(
                 working_messages, temperature=model.temperature,
-                max_tokens=MAX_TOKENS, seed=seed,
+                max_tokens=model.max_tokens, seed=seed if model.send_seed else None,
             )
         except Exception as exc:
             attempt.update(status="transport_failed", error_type=type(exc).__name__,
@@ -87,7 +90,21 @@ def _call_for_json(
             content=response.content, returned_model=response.returned_model,
             usage=response.usage, raw_response=response.raw,
             transport_attempts=getattr(response, "transport_attempts", []),
+            returned_provider=getattr(response, "returned_provider", None),
+            finish_reason=getattr(response, "finish_reason", None),
         )
+        # A truncated or blocked response is a setup/provider failure, not a JSON
+        # repair opportunity. Preserve usage and stop without another paid call.
+        missing_finish = (attempt["finish_reason"] is None
+                          and getattr(model.client, "provider_metadata_required", False))
+        if (attempt["finish_reason"] not in (None, "stop") or missing_finish
+                or not response.content.strip()):
+            attempt.update(status="incomplete_response", validation_error=(
+                "Empty or incomplete completion; inspect finish_reason and usage, "
+                "then review token/reasoning settings before a documented rerun."
+            ))
+            event_sink(attempt)
+            raise ScorableResponseError(attempt["validation_error"], attempts)
         try:
             value = parse_json_object(response.content)
             validator(value)
@@ -422,10 +439,20 @@ def run_match(
 
     def record_base() -> dict[str, Any]:
         returned: dict[str, set[str]] = {role: set() for role in seats}
+        providers: dict[str, set[str]] = {role: set() for role in seats}
+        missing_models = {role: 0 for role in seats}
+        missing_providers = {role: 0 for role in seats}
         for event in events:
             role = event["stage"].rsplit("_", 1)[-1]
-            if role in returned and event.get("returned_model"):
-                returned[role].add(event["returned_model"])
+            if role in providers and "raw_response" in event:
+                if isinstance(event.get("returned_model"), str) and event["returned_model"].strip():
+                    returned[role].add(event["returned_model"])
+                else:
+                    missing_models[role] += 1
+                if event.get("returned_provider"):
+                    providers[role].add(event["returned_provider"])
+                else:
+                    missing_providers[role] += 1
         return {
             "schema_version": __version__,
             "manifest": manifest, "pair_id": pair_id, "match_id": match_id,
@@ -434,6 +461,9 @@ def run_match(
             "mode": mode, "repetition": repetition, "seed": seed,
             "roles": manifest["roles"],
             "returned_models": {role: sorted(values) for role, values in returned.items()},
+            "returned_providers": {role: sorted(values) for role, values in providers.items()},
+            "missing_model_responses": missing_models,
+            "missing_provider_responses": missing_providers,
             "ground_truth": scenario["ground_truth"], "rounds": rounds,
             "evidence_id_map": evidence_id_map,
             "events": events, "partial_round": partial_round,

@@ -54,7 +54,27 @@ def _cohort(record: dict[str, Any], seat: str | None = None) -> str:
                 if key not in {"scenario_sha256", "configuration_id"}}
     return fingerprint({"schema": record.get("schema_version"), "roles": record["roles"],
                         "settings": settings, "seat": seat,
-                        "returned_models": record.get("returned_models", {})})
+                        "returned_models": record.get("returned_models", {}),
+                        "returned_providers": record.get("returned_providers", {})})
+
+
+def _identity_issues(record: dict[str, Any]) -> list[str]:
+    issues = []
+    roles = ("a", "b", "mediator") if record["mode"] == "active" else ("a", "b")
+    for role in roles:
+        models = record.get("returned_models", {}).get(role, [])
+        providers = record.get("returned_providers", {}).get(role, [])
+        if (len(models) > 1 or (record.get("manifest") and not models)
+                or record.get("missing_model_responses", {}).get(role, 0)):
+            issues.append(f"{role} has missing or changing returned model identity")
+        if len(providers) > 1:
+            issues.append(f"{role} changed providers within the match")
+        required = record.get("manifest", {}).get("roles", {}).get(role, {}).get(
+            "provider_metadata_required", False
+        )
+        if required and (not providers or record.get("missing_provider_responses", {}).get(role, 0)):
+            issues.append(f"{role} has missing OpenRouter provider metadata")
+    return issues
 
 
 def summarize_records(records: list[dict[str, Any]]) -> dict[str, Any]:
@@ -65,13 +85,21 @@ def summarize_records(records: list[dict[str, Any]]) -> dict[str, Any]:
     legacy = sum(not item.get("manifest") for item in successful)
     if legacy:
         warnings.append(f"{legacy} successful records lack a manifest; legacy pairing is provisional.")
+    eligible = []
+    seen = set()
     for record in successful:
         key = _pair_key(record)
         mode = record["mode"]
         if mode not in {"active", "empty"}:
             raise ValueError(f"Unknown match mode: {mode}")
-        if mode in grouped[key]:
+        if (key, mode) in seen:
             raise ValueError(f"Duplicate successful {mode} record for {record['scenario_id']}")
+        seen.add((key, mode))
+        issues = _identity_issues(record)
+        if issues:
+            warnings.append(f"Excluded {record.get('match_id', record['scenario_id'])}: " + "; ".join(issues))
+            continue
+        eligible.append(record)
         grouped[key][mode] = record
 
     pairs: list[dict[str, Any]] = []
@@ -87,6 +115,13 @@ def summarize_records(records: list[dict[str, Any]]) -> dict[str, Any]:
         ):
             warnings.append(f"Excluded {active['scenario_id']} pair: returned actor models differ.")
             continue
+        if any(
+            active.get("returned_providers", {}).get(role, [])
+            != empty.get("returned_providers", {}).get(role, [])
+            for role in ("a", "b")
+        ):
+            warnings.append(f"Excluded {active['scenario_id']} pair: returned actor providers differ.")
+            continue
         active_scores = active["scores"]
         empty_scores = empty["scores"]
         lift = round(empty_scores["crisis_cost"] - active_scores["crisis_cost"], 2)
@@ -100,6 +135,8 @@ def summarize_records(records: list[dict[str, Any]]) -> dict[str, Any]:
                 "state_a_model": key[3],
                 "state_b_model": key[4],
                 "mediator_model": key[5],
+                "returned_models": active.get("returned_models", {}),
+                "returned_providers": active.get("returned_providers", {}),
                 "mediation_lift": lift,
                 "active_crisis_cost": active_scores["crisis_cost"],
                 "empty_crisis_cost": empty_scores["crisis_cost"],
@@ -184,7 +221,7 @@ def summarize_records(records: list[dict[str, Any]]) -> dict[str, Any]:
         )
 
     actor_observations: dict[tuple[str, str], list[dict[str, float]]] = defaultdict(list)
-    for record in successful:
+    for record in eligible:
         if record["mode"] != "empty":
             continue
         for seat in ("a", "b"):

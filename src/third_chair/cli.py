@@ -11,6 +11,7 @@ from .scenario import evidence_text, load_scenario
 from .tournament import (
     build_model_seats,
     build_schedule,
+    configuration_issues,
     estimate_calls,
     load_model_configs,
     run_schedule,
@@ -90,6 +91,9 @@ def _cmd_plan(args: argparse.Namespace) -> int:
 
 def _cmd_run(args: argparse.Namespace) -> int:
     configs, schedule = _schedule_from_args(args)
+    issues = configuration_issues(configs)
+    if issues:
+        raise ValueError("Configuration is not ready:\n" + "\n".join(issues))
     run_schedule(
         schedule=schedule,
         model_seats=build_model_seats(configs),
@@ -97,6 +101,20 @@ def _cmd_run(args: argparse.Namespace) -> int:
     )
     print(f"Wrote {args.output}")
     return 0
+
+
+def _cmd_check_config(args: argparse.Namespace) -> int:
+    configs = load_model_configs(args.models)
+    issues = configuration_issues(configs)
+    for config in configs:
+        print(f"{config.label}: {config.model}; max_tokens={config.max_tokens}; "
+              f"temperature={config.temperature}; send_seed={config.send_seed}; "
+              f"provider={json.dumps(config.provider)}; reasoning={json.dumps(config.reasoning)}")
+    for issue in issues:
+        print(f"ACTION REQUIRED: {issue}")
+    print("Offline configuration check only. No API calls or credits used. "
+          "Model availability and parameter support still require a live smoke run.")
+    return 1 if issues else 0
 
 
 def _cmd_summarize(args: argparse.Namespace) -> int:
@@ -126,6 +144,10 @@ def build_parser() -> argparse.ArgumentParser:
     preview = subparsers.add_parser("preview")
     preview.add_argument("--scenario", default="grid-vote")
     preview.set_defaults(func=_cmd_preview)
+
+    check = subparsers.add_parser("check-config", help="Check configuration locally without API calls")
+    check.add_argument("--models", required=True)
+    check.set_defaults(func=_cmd_check_config)
 
     for command, handler in (("plan", _cmd_plan), ("run", _cmd_run)):
         sub = subparsers.add_parser(command)
