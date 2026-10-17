@@ -3,14 +3,49 @@
   "$id": "https://example.org/third-chair/actor-intent.schema.json",
   "title": "Third Chair actor intent",
   "type": "object",
-  "required": ["belief_opponent_responsible", "posture", "public_message", "private_reason", "evidence_ids"],
+  "required": [
+    "belief_opponent_responsible",
+    "posture",
+    "public_message",
+    "private_reason",
+    "evidence_ids",
+    "evidence_stances"
+  ],
   "properties": {
-    "belief_opponent_responsible": {"type": "integer", "minimum": 0, "maximum": 100},
-    "posture": {"type": "string"},
-    "public_message": {"type": "string", "minLength": 1},
-    "private_reason": {"type": "string", "minLength": 1},
-    "evidence_ids": {"type": "array", "items": {"type": "string"}, "uniqueItems": true}
+    "belief_opponent_responsible": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100
+    },
+    "posture": {
+      "type": "string"
+    },
+    "public_message": {
+      "type": "string",
+      "minLength": 1
+    },
+    "private_reason": {
+      "type": "string",
+      "minLength": 1
+    },
+    "evidence_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "evidence_stances": {
+      "type": "object",
+      "additionalProperties": {
+        "enum": [
+          "support",
+          "reject",
+          "uncertain"
+        ]
+      },
+      "description": "Exactly the IDs in evidence_ids, with their stated relationship to the decision. Enforced by runtime validation."
+    }
   },
   "additionalProperties": false
 }
-

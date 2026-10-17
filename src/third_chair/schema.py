@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import math
 from typing import Any
 
 
@@ -45,7 +46,7 @@ def _exact_fields(value: dict[str, Any], required: set[str], label: str) -> None
 
 
 def _probability(value: Any, field: str) -> int:
-    if isinstance(value, bool) or not isinstance(value, (int, float)):
+    if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
         raise ValueError(f"{field} must be a number")
     rounded = int(value)
     if rounded != value or not 0 <= rounded <= 100:
@@ -70,6 +71,13 @@ def _evidence_ids(value: Any, known_ids: set[str]) -> None:
         raise ValueError(f"Unknown evidence IDs: {', '.join(unknown)}")
 
 
+def _evidence_stances(value: Any, cited_ids: list[str]) -> None:
+    if not isinstance(value, dict) or set(value) != set(cited_ids):
+        raise ValueError("evidence_stances must assign a stance to every cited ID, and no others")
+    if any(stance not in ("support", "reject", "uncertain") for stance in value.values()):
+        raise ValueError("Each evidence stance must be support, reject, or uncertain")
+
+
 def validate_actor_intent(
     value: dict[str, Any], *, postures: set[str], known_ids: set[str]
 ) -> None:
@@ -79,6 +87,7 @@ def validate_actor_intent(
         "public_message",
         "private_reason",
         "evidence_ids",
+        "evidence_stances",
     }
     _exact_fields(value, required, "Actor intent")
     _probability(value["belief_opponent_responsible"], "belief_opponent_responsible")
@@ -87,6 +96,7 @@ def validate_actor_intent(
     _short_text(value["public_message"], "public_message", 90)
     _short_text(value["private_reason"], "private_reason", 120)
     _evidence_ids(value["evidence_ids"], known_ids)
+    _evidence_stances(value["evidence_stances"], value["evidence_ids"])
 
 
 def validate_actor_final(
@@ -98,6 +108,7 @@ def validate_actor_final(
         "accepts_intervention",
         "public_message",
         "evidence_ids",
+        "evidence_stances",
     }
     _exact_fields(value, required, "Actor final move")
     _probability(value["belief_opponent_responsible"], "belief_opponent_responsible")
@@ -107,6 +118,7 @@ def validate_actor_final(
         raise ValueError("accepts_intervention must be true or false")
     _short_text(value["public_message"], "public_message", 90)
     _evidence_ids(value["evidence_ids"], known_ids)
+    _evidence_stances(value["evidence_stances"], value["evidence_ids"])
 
 
 def validate_mediator(

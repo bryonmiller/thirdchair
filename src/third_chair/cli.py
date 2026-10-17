@@ -71,6 +71,8 @@ def _schedule_from_args(args: argparse.Namespace):
         modes=_modes(args.modes),
         repetitions=args.repetitions,
         seed=args.seed,
+        fixed_a=args.actor_a,
+        fixed_b=args.actor_b,
     )
 
 
@@ -130,6 +132,8 @@ def build_parser() -> argparse.ArgumentParser:
         sub.add_argument("--models", required=True)
         sub.add_argument("--scenario", default="all")
         sub.add_argument("--rotation", choices=["balanced", "full"], default="balanced")
+        sub.add_argument("--actor-a", help="Fix State A across all mediator candidates")
+        sub.add_argument("--actor-b", help="Fix State B across all mediator candidates")
         sub.add_argument("--modes", default="active,empty")
         sub.add_argument("--repetitions", type=int, default=1)
         sub.add_argument("--seed", type=int, default=4100)

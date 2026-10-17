@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 import json
+import copy
+import hashlib
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -53,6 +56,35 @@ def public_evidence(item: dict[str, Any]) -> dict[str, Any]:
         "reliability": item["reliability"],
         "content": item["content"],
     }
+
+
+def opaque_evidence_ids(
+    scenario: dict[str, Any], *, seed: int | None, repetition: int
+) -> tuple[dict[str, Any], dict[str, str]]:
+    """Remove source-ID cues without changing content, truth or delivery timing.
+
+    The mapping is evaluator metadata, never a policy input. This removes an
+    obvious suffix cue; it does not make public narratives unseen test cases.
+    """
+    ids = {item["id"] for episode in scenario["episodes"]
+           for evidence in episode["evidence"].values() for item in evidence}
+    salt = f"{scenario['id']}:{seed}:{repetition}:evidence-v1:"
+    ordered = sorted(ids, key=lambda item: hashlib.sha256((salt + item).encode()).hexdigest())
+    mapping = {old: f"E{index:03d}" for index, old in enumerate(ordered, 1)}
+    pattern = re.compile(r"(?<![A-Za-z0-9_-])(?:" + "|".join(
+        re.escape(item) for item in sorted(ids, key=len, reverse=True)
+    ) + r")(?![A-Za-z0-9_-])")
+
+    def replace(value: Any) -> Any:
+        if isinstance(value, str):
+            return pattern.sub(lambda match: mapping[match.group()], value)
+        if isinstance(value, list):
+            return [replace(item) for item in value]
+        if isinstance(value, dict):
+            return {mapping.get(key, key): replace(item) for key, item in value.items()}
+        return value
+
+    return replace(copy.deepcopy(scenario)), mapping
 
 
 def evidence_text(items: list[dict[str, Any]]) -> str:

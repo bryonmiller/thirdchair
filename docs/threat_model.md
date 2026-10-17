@@ -44,7 +44,7 @@ The public release contains sealed truth, so models may eventually learn the cas
 
 ## Score gaming
 
-A model can lower escalation by choosing passive postures regardless of evidence. The archive case and false-peace flag make that visible. A model can also spend intervention tokens on harmless moments to appear active, so lift per intervention and timing annotation remain separate.
+A model can lower escalation by choosing passive postures regardless of evidence. The archive case and narrow false-peace flag reveal only some instances. Correct attribution combined with harmful inaction can still receive a good score; this baseline must not be used for RL training. A model can also spend intervention tokens on harmless moments to appear active, so lift per intervention and timing annotation remain separate.
 
 No numeric rule can prevent every game-specific strategy. Public transcripts and component scores are part of the security design.
 

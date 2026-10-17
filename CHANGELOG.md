@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.4.0 - 2026-10-17
+
+Audited descriptive baseline. No empirical model data informed these changes and no trained policy is included.
+
+- Preserve evidence/checks in final decisions and retain seat-specific history, cumulative neutral evidence and verification targets.
+- Require support/reject/uncertain evidence stances; randomize opaque runtime evidence IDs.
+- Remove direct message-acceptance bonuses and hidden-truth/evidence penalties from public state dynamics; retain evaluator flags and add attribution Brier error.
+- Report absolute active/control false peace separately from introduced failures; gate positive-lift wins; distinguish own severe actions from critical-match participation.
+- Add fixed-actor schedules and configuration-specific report rows.
+- Record requests, retry outcomes, full/partial events and configuration/source/scenario hashes. Reject duplicate or incompatible records and silent replay of interrupted calls.
+- Add regression tests, CI validation and a generated source download before Pages deployment.
+- Preserve the original scoring/protocol under docs/legacy; document the bounded research direction and unresolved inaction/accountability limitations.
+
+Migration: response schemas, score semantics and IDs are incompatible with 0.3.0. Use new output paths and do not pool versions. See docs/audit_repairs.md.
+
+
 ## 0.3.0 - 2026-08-12
 
 - Rebuilt the project as a three-model cyber-crisis mediation tournament.

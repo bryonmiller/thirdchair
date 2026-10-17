@@ -35,13 +35,13 @@ third-chair plan \
   --repetitions 1
 ```
 
-The registered balanced pilot has 18 matches and up to 243 model turns before retries. A full seat swap has 36 matches and up to 486 turns.
+The legacy balanced schedule has 18 matches and up to 243 model turns before retries. A full seat swap has 36 matches and up to 486 turns.
 
 Use the provider's current pricing page to estimate cost from the expected context and output length. Pricing changes too often to hard-code into this repository.
 
-## 4. Run one smoke match
+## 4. Run a small smoke schedule
 
-Before the full pilot, use one scenario and one condition:
+Before the pilot, use one scenario and one condition. This command still runs three role assignments:
 
 ```bash
 third-chair run \
@@ -77,7 +77,7 @@ third-chair run \
   --output results/pilot-matches.jsonl
 ```
 
-The runner appends one JSON object per match. It checks existing match IDs before starting, so the same command can resume an interrupted batch.
+The runner appends one JSON object per completed or failed match plus a per-call event journal. It skips previously recorded matching identities, rejects incompatible provenance, and refuses automatic replay of an interrupted journal. Preserve partial logs and use a documented new output/repetition for a rerun.
 
 Do not change model configuration, prompts, scenario files, temperature, seed, or scoring during the batch. If a change is necessary, stop and record a protocol deviation before beginning a new batch.
 
@@ -107,22 +107,11 @@ Start with:
 
 Then conduct the blinded annotation described in the annotation guide.
 
-## 8. Run the confirmatory schedule
+## 8. Plan further evaluation
 
-After reviewing the pilot and locking any justified revision, use all six seat permutations and at least three repetitions:
+The old recommendation of three repetitions and full rotation is not a power calculation and does not remove opponent confounding. Use `--actor-a model-a --actor-b model-b` for fixed actor configurations across mediator candidates. Keep role rotation as a descriptive comparison.
 
-```bash
-third-chair run \
-  --models eval_data/models.json \
-  --scenario all \
-  --rotation full \
-  --modes active,empty \
-  --repetitions 3 \
-  --seed 4100 \
-  --output results/confirmatory-matches.jsonl
-```
-
-Keep the pilot and confirmatory files separate. State which batch supports each claim on the site.
+Choose any confirmatory sample size from pilot variance, the effect or precision target, and clustering by scenario and model configuration. More repeats of the same three stories do not establish broad generalization. See [preregistration.md](preregistration.md) and [research_roadmap.md](research_roadmap.md). Do not train an RL policy against this baseline.
 
 ## Result integrity checklist
 

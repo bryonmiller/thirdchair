@@ -4,7 +4,9 @@ Two models play rival governments during a cyber crisis. A third gets two chance
 
 This is a runnable evaluation for the ChinaTalk Evals for the Situation Room contest. It puts models in a competitive, multi-turn setting with private information, public pressure, forged evidence, and actions that change the next round.
 
-No model results are included in this release. The runner, scenarios, scoring, paired control, and analysis are complete. Results belong in the project only after a real model run produces traceable transcripts.
+**Version 0.4.0 is a repaired descriptive baseline.** No empirical model results or trained policies are included. Context handling, evidence stances, logging, pairing and safety summaries have regression tests. The consequence model still favors restraint and is not suitable for RL training or broad claims about diplomatic competence.
+
+Start with [audit repairs and remaining limits](docs/audit_repairs.md), the [current pilot protocol](docs/preregistration.md), and the [bounded research roadmap](docs/research_roadmap.md). The original [0.3.0 source snapshot](https://github.com/bryonmiller/thirdchair/tree/757334b77d2aa3dd110f490897775a26fdcb929a) and [protocol](docs/legacy/preregistration-0.3.0.md) remain identifiable. Scores and response schemas changed; do not pool the versions.
 
 ## What the tournament tests
 
@@ -18,13 +20,13 @@ The state models receive different private briefs. They announce a posture, hear
 
 Every active-mediator match has an empty-chair twin with the same scenario, role assignment, and seed. The main result is mediation lift: crisis cost without the mediator minus crisis cost with the mediator.
 
-Lower tension alone is not enough. A mediator fails if it buys calm by helping a responsible state erase good evidence or by pressing an innocent target to make a false concession.
+Lower tension alone is not enough. The intended research question concerns false concessions and abandoned accountability. The current automated false-peace predicate covers only a narrow subset, so these broader outcomes require human review and a new consequence model.
 
 ## Why the seats rotate
 
 A model can sound careful when it is cast as a neutral and become reckless when its own side is under pressure. The balanced pilot places each of three models in State A, State B, and the mediator seat once per scenario. Scenario order reverses the two state seats to reduce one-sided role effects.
 
-The report keeps mediator and actor behavior beside each other. This exposes the chair gap: the difference between how a model manages other actors and how it behaves when it has something to win.
+The report keeps mediator and actor behavior beside each other as descriptive role profiles. It does not compute a scalar chair gap. With three distinct models, each mediator faces a different opponent pair, so rotation alone cannot establish a causal mediator ranking.
 
 ## Scenarios
 
@@ -77,15 +79,25 @@ third-chair summarize results/pilot-matches.jsonl \
   --output results/pilot-summary.json
 ```
 
-The runner is resumable. If it stops, rerun the same command and it will skip match IDs already present in the output file.
+The runner skips complete records with matching configuration identities, including recorded failures. It rejects incompatible settings or source/scenario changes in an existing output. A separate `.events.jsonl` journal preserves each request and response even when a round fails. If a process stops during a match, preserve its journal and document a new output/repetition; do not silently replay paid calls.
+
+To compare mediators with fixed actor configurations:
+
+```bash
+third-chair plan --models eval_data/models.json --actor-a model-a --actor-b model-b
+third-chair run --models eval_data/models.json --actor-a model-a --actor-b model-b \
+  --output results/fixed-actors.jsonl
+```
+
+Every configured model is a mediator candidate, including models also used in a state seat. Calls have separate role contexts. The same seed is used across mediator candidates, but independent API executions do not guarantee identical intentions. Forked controls are a future extension.
 
 ## Measures
 
 The primary measure is mediation lift. The report also shows:
 
 - whether the active mediator prevents critical escalation;
-- whether it introduces false peace;
-- how much truth accuracy changes against the empty-chair twin;
+- absolute active/control false-peace rates and newly introduced failures;
+- attribution Brier score and the separately labeled legacy truth score;
 - crisis-cost reduction per intervention;
 - model posture severity when the same model occupies a state seat; and
 - failures, retries, returned model identifiers, settings, and complete transcripts.
@@ -108,11 +120,11 @@ tests_py/                Standard-library tests with fixed model fixtures
 
 This is a small tournament, not a claim about diplomacy in general. The state agents are models, not people. Outcomes depend on prompt wording, provider settings, sampling, and the models chosen as opponents. The numeric crisis engine makes comparisons reproducible, but its weights remain design judgments and should receive expert review.
 
-Public scenarios may eventually enter training data. A later study should use held-back cases and human review of the transcripts, especially the mediator's treatment of deception, face-saving, and private threats.
+Runtime evidence IDs are replaced with seed-dependent opaque labels, removing the forged-item suffix cue. The original three narratives and disclosure timing remain public and fixed. Public scenarios may enter training data. A later study should use held-back cases and human review of the transcripts, especially the mediator's treatment of deception, face-saving, and private threats.
 
 ## Why this fits the author
 
-I, Bryon Miller, direct a community-college computer science division and teaches cybersecurity. I have have published cyber threat intelligence research, built hands-on assessments, coached collegiate esports, and worked earlier in my career as a counselor. The Third Chair draws on that mix: cyber evidence, assessment design, competitive play, and the problem of helping people change course while they are under pressure.
+I, Bryon Miller, direct a community-college computer science division and teach cybersecurity. I have published cyber threat intelligence research, built hands-on assessments, coached collegiate esports, and worked earlier in my career as a counselor. The Third Chair draws on that mix: cyber evidence, assessment design, competitive play, and the problem of helping people change course while they are under pressure.
 
 - [Research profile](https://www.jinfowar.com/authors/bryon-miller)
 - [LinkedIn](https://www.linkedin.com/in/bryonmiller)

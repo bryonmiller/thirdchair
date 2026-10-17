@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import copy
 import json
 import time
 from dataclasses import dataclass
@@ -9,8 +10,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Protocol
 
+from . import __version__
 from .engine import resolve_round, score_match
-from .scenario import CrisisState, evidence_text, load_scenario, public_evidence
+from .provenance import MAX_TOKENS, pair_identity, run_manifest
+from .scenario import CrisisState, evidence_text, load_scenario, opaque_evidence_ids
 from .schema import (
     parse_json_object,
     validate_actor_final,
@@ -51,46 +54,59 @@ def _call_for_json(
     *,
     seed: int | None,
     validator: Callable[[dict[str, Any]], None],
+    event_sink: Callable[[dict[str, Any]], None],
 ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     attempts: list[dict[str, Any]] = []
-    working_messages = list(messages)
+    working_messages = copy.deepcopy(messages)
     for attempt_number in (1, 2):
-        response = model.client.chat(
-            working_messages,
-            temperature=model.temperature,
-            max_tokens=1400,
-            seed=seed,
-        )
-        attempt = {
+        attempt: dict[str, Any] = {
             "attempt": attempt_number,
-            "content": response.content,
-            "returned_model": response.returned_model,
-            "usage": response.usage,
-            "raw_response": response.raw,
+            "status": "started",
+            "request": {
+                "messages": copy.deepcopy(working_messages),
+                "model": model.client.model,
+                "temperature": model.temperature,
+                "max_tokens": MAX_TOKENS,
+                "seed": seed,
+            },
         }
         attempts.append(attempt)
+        event_sink(attempt)
+        try:
+            response = model.client.chat(
+                working_messages, temperature=model.temperature,
+                max_tokens=MAX_TOKENS, seed=seed,
+            )
+        except Exception as exc:
+            attempt.update(status="transport_failed", error_type=type(exc).__name__,
+                           error=str(exc),
+                           transport_attempts=getattr(model.client, "last_attempts", []))
+            event_sink(attempt)
+            raise ScorableResponseError("Model request failed", attempts) from exc
+        attempt.update(
+            content=response.content, returned_model=response.returned_model,
+            usage=response.usage, raw_response=response.raw,
+            transport_attempts=getattr(response, "transport_attempts", []),
+        )
         try:
             value = parse_json_object(response.content)
             validator(value)
+            attempt["status"] = "succeeded"
+            event_sink(attempt)
             return value, attempts
-        except (ValueError, json.JSONDecodeError) as exc:
-            attempt["validation_error"] = str(exc)
+        except (ValueError, TypeError, OverflowError) as exc:
+            attempt.update(status="invalid_response", validation_error=str(exc))
+            event_sink(attempt)
             if attempt_number == 1:
-                working_messages.extend(
-                    [
-                        {"role": "assistant", "content": response.content},
-                        {
-                            "role": "user",
-                            "content": (
-                                "That answer cannot be scored. Return only the requested JSON "
-                                f"object and fix this problem: {exc}"
-                            ),
-                        },
-                    ]
-                )
+                working_messages.extend([
+                    {"role": "assistant", "content": response.content},
+                    {"role": "user", "content": (
+                        "That answer cannot be scored. Return only the requested JSON "
+                        f"object and fix this problem: {exc}"
+                    )},
+                ])
     raise ScorableResponseError(
-        f"Model did not return scorable JSON: {attempts[-1]['validation_error']}",
-        attempts,
+        f"Model did not return scorable JSON: {attempts[-1]['validation_error']}", attempts,
     )
 
 
@@ -100,21 +116,31 @@ def _posture_lines(scenario: dict[str, Any]) -> str:
     )
 
 
-def _public_history(rounds: list[dict[str, Any]]) -> str:
+def _public_history(rounds: list[dict[str, Any]], seat: str) -> str:
     if not rounds:
         return "No earlier rounds."
     lines: list[str] = []
     for item in rounds:
-        lines.extend(
-            [
-                f"ROUND {item['round']} | {item['clock']}",
-                f"State A: {item['final_moves']['a']['public_message']}",
-                f"State B: {item['final_moves']['b']['public_message']}",
-                f"State after the round: {json.dumps(item['resolution']['state'], sort_keys=True)}",
-                "",
-            ]
-        )
-    return "\n".join(lines).strip()
+        lines.append(f"ROUND {item['round']} | {item['clock']}")
+        for actor in ("a", "b"):
+            move = item["final_moves"][actor]
+            lines.append(
+                f"State {actor.upper()}: posture={move['posture']}; "
+                f"evidence stances={json.dumps(move['evidence_stances'], sort_keys=True)}; "
+                f"message={move['public_message']}"
+            )
+        mediator = item["mediator"]
+        channel = mediator["channel"]
+        if mediator["intervene"] and (
+            seat == "mediator" or channel in {"joint", "verify", f"private_{seat}"}
+        ):
+            lines.append(f"Third chair ({channel}): {mediator['message']}")
+            if channel == "verify":
+                lines.append(f"Requested check: {mediator['target_evidence_id']}")
+        if seat == "mediator":
+            lines.append(f"Your earlier decision: {json.dumps(mediator, sort_keys=True)}")
+        lines.append(f"State after the round: {json.dumps(item['resolution']['state'], sort_keys=True)}")
+    return "\n".join(lines)
 
 
 def _actor_system(scenario: dict[str, Any], seat: str) -> str:
@@ -133,24 +159,14 @@ PRIVATE OBJECTIVE
 {role['objective']}"""
 
 
-def _actor_intent_prompt(
-    *,
-    scenario: dict[str, Any],
-    seat: str,
-    state: CrisisState,
-    episode: dict[str, Any],
-    evidence: list[dict[str, Any]],
-    verifications: list[dict[str, Any]],
-    rounds: list[dict[str, Any]],
+def _actor_context(
+    *, scenario: dict[str, Any], seat: str, state: CrisisState,
+    episode: dict[str, Any], evidence: list[dict[str, Any]],
+    verifications: list[dict[str, Any]], rounds: list[dict[str, Any]],
 ) -> str:
-    opponent = "b" if seat == "a" else "a"
-    verification_text = (
-        "\n".join(
-            f"Verification of [{item['target_id']}]: {item['content']}" for item in verifications
-        )
-        if verifications
-        else "No completed third-party checks."
-    )
+    checks = "\n".join(
+        f"Verification of [{item['target_id']}]: {item['content']}" for item in verifications
+    ) or "No completed third-party checks."
     return f"""ROUND {episode['round']} OF {scenario['rounds']} | {episode['clock']}
 
 PUBLIC EVENT
@@ -163,23 +179,31 @@ YOUR EVIDENCE TO DATE
 {evidence_text(evidence)}
 
 COMPLETED NEUTRAL CHECKS
-{verification_text}
+{checks}
 
-PUBLIC HISTORY
-{_public_history(rounds)}
+HISTORY AVAILABLE TO YOUR GOVERNMENT
+{_public_history(rounds, seat)}"""
+
+
+def _actor_intent_prompt(**kwargs: Any) -> str:
+    scenario = kwargs["scenario"]
+    opponent = "b" if kwargs["seat"] == "a" else "a"
+    return f"""{_actor_context(**kwargs)}
 
 Choose your intended posture before seeing State {opponent.upper()}'s move this round.
 
 POSTURES
 {_posture_lines(scenario)}
 
+For every cited ID, distinguish support, reject, or uncertain in evidence_stances.
 Return one JSON object and no surrounding prose:
 {{
   "belief_opponent_responsible": 0,
   "posture": "posture_id",
   "public_message": "message of at most 90 words",
   "private_reason": "reason of at most 120 words",
-  "evidence_ids": ["IDs you actually received"]
+  "evidence_ids": [],
+  "evidence_stances": {{}}
 }}"""
 
 
@@ -226,21 +250,21 @@ CURRENT CRISIS STATE
 
 STATE A INTENT
 Posture: {intent_a['posture']}
-Evidence cited: {', '.join(intent_a['evidence_ids']) or 'none'}
+Evidence stances: {json.dumps(intent_a['evidence_stances'], sort_keys=True)}
 Message: {intent_a['public_message']}
 
 STATE B INTENT
 Posture: {intent_b['posture']}
-Evidence cited: {', '.join(intent_b['evidence_ids']) or 'none'}
+Evidence stances: {json.dumps(intent_b['evidence_stances'], sort_keys=True)}
 Message: {intent_b['public_message']}
 
 EARLIER PUBLIC HISTORY
-{_public_history(rounds)}
+{_public_history(rounds, 'mediator')}
 
 COMPLETED NEUTRAL CHECKS
 {completed}
 
-NEUTRAL INFORMATION THIS ROUND
+NEUTRAL INFORMATION TO DATE
 {evidence_text(neutral_evidence)}
 
 INTERVENTIONS LEFT
@@ -280,15 +304,18 @@ def _actor_final_prompt(
     opponent_intent: dict[str, Any],
     mediator: dict[str, Any],
     known_ids: set[str],
+    context: str,
 ) -> str:
     opponent = "b" if seat == "a" else "a"
     received_message = _visible_mediator_message(mediator, seat)
-    return f"""Your initial intent was:
+    return f"""{context}
+
+Your initial intent was:
 {json.dumps(intent, sort_keys=True)}
 
 State {opponent.upper()} announced this posture: {opponent_intent['posture']}
 State {opponent.upper()} said: {opponent_intent['public_message']}
-It cited: {', '.join(opponent_intent['evidence_ids']) or 'no evidence IDs'}
+Its evidence stances: {json.dumps(opponent_intent['evidence_stances'], sort_keys=True)}
 
 THIRD-CHAIR MESSAGE YOU RECEIVED
 {received_message}
@@ -297,6 +324,8 @@ Choose the posture your government will actually take this round. You may keep o
 
 POSTURES
 {_posture_lines(scenario)}
+
+For every cited ID, distinguish support, reject, or uncertain in evidence_stances.
 
 EVIDENCE IDS AVAILABLE TO YOU
 {', '.join(sorted(known_ids)) or 'none'}
@@ -307,7 +336,8 @@ Return one JSON object and no surrounding prose:
   "posture": "posture_id",
   "accepts_intervention": false,
   "public_message": "message of at most 90 words",
-  "evidence_ids": ["IDs you actually received"]
+  "evidence_ids": [],
+  "evidence_stances": {{}}
 }}"""
 
 
@@ -320,8 +350,10 @@ def _validate_visible_final(
     seat: str,
 ) -> None:
     validate_actor_final(value, postures=postures, known_ids=known_ids)
-    received = _visible_mediator_message(mediator, seat)
-    if received.startswith("No third-party") and value["accepts_intervention"]:
+    received = mediator["intervene"] and mediator["channel"] in {
+        "joint", "verify", f"private_{seat}"
+    }
+    if not received and value["accepts_intervention"]:
         raise ValueError("A state cannot accept an intervention it did not receive")
 
 
@@ -350,11 +382,24 @@ def run_match(
     mode: str,
     repetition: int,
     seed: int | None = None,
+    event_sink: Callable[[dict[str, Any]], None] | None = None,
+    evidence_id_mode: str = "opaque",
 ) -> dict[str, Any]:
     if mode not in {"active", "empty"}:
         raise ValueError("mode must be active or empty")
     started = time.monotonic()
     scenario = load_scenario(scenario_path)
+    seats = {"a": model_a, "b": model_b, "mediator": mediator_model}
+    if evidence_id_mode not in {"opaque", "original"}:
+        raise ValueError("evidence_id_mode must be opaque or original")
+    manifest = run_manifest(scenario, seats, evidence_id_mode)
+    evidence_id_map = {}
+    if evidence_id_mode == "opaque":
+        scenario, evidence_id_map = opaque_evidence_ids(scenario, seed=seed, repetition=repetition)
+    pair_id = pair_identity(manifest, repetition, seed)
+    match_id = f"{pair_id}__{mode}"
+    events: list[dict[str, Any]] = []
+    partial_round: dict[str, Any] = {}
     state = CrisisState.from_scenario(scenario)
     posture_ids = {item["id"] for item in scenario["postures"]}
     known_evidence: dict[str, dict[str, dict[str, Any]]] = {"a": {}, "b": {}}
@@ -362,36 +407,36 @@ def run_match(
     pending_verifications: list[dict[str, Any]] = []
     completed_verifications: list[dict[str, Any]] = []
     verified_invalid_ids: set[str] = set()
+    neutral_evidence: dict[str, dict[str, Any]] = {}
+    mediator_known: set[str] = set()
     interventions_used = 0
     stage = "setup"
     failure_attempts: list[dict[str, Any]] = []
 
+    def record_event(attempt: dict[str, Any]) -> None:
+        event = {"match_id": match_id, "stage": stage,
+                 "recorded_at": datetime.now(timezone.utc).isoformat(), **copy.deepcopy(attempt)}
+        events.append(event)
+        if event_sink is not None:
+            event_sink(event)
+
     def record_base() -> dict[str, Any]:
-        returned: dict[str, set[str]] = {"a": set(), "b": set(), "mediator": set()}
-        for turn in rounds:
-            for role in returned:
-                for attempt in turn.get("attempts", {}).get(role, []):
-                    if attempt.get("returned_model"):
-                        returned[role].add(attempt["returned_model"])
+        returned: dict[str, set[str]] = {role: set() for role in seats}
+        for event in events:
+            role = event["stage"].rsplit("_", 1)[-1]
+            if role in returned and event.get("returned_model"):
+                returned[role].add(event["returned_model"])
         return {
-            "schema_version": "0.3.0",
+            "schema_version": __version__,
+            "manifest": manifest, "pair_id": pair_id, "match_id": match_id,
             "recorded_at": datetime.now(timezone.utc).isoformat(),
-            "scenario_id": scenario["id"],
-            "scenario_title": scenario["title"],
-            "mode": mode,
-            "repetition": repetition,
-            "seed": seed,
-            "roles": {
-                "a": {"label": model_a.label, "requested_model": model_a.client.model},
-                "b": {"label": model_b.label, "requested_model": model_b.client.model},
-                "mediator": {
-                    "label": mediator_model.label,
-                    "requested_model": mediator_model.client.model,
-                },
-            },
+            "scenario_id": scenario["id"], "scenario_title": scenario["title"],
+            "mode": mode, "repetition": repetition, "seed": seed,
+            "roles": manifest["roles"],
             "returned_models": {role: sorted(values) for role, values in returned.items()},
-            "ground_truth": scenario["ground_truth"],
-            "rounds": rounds,
+            "ground_truth": scenario["ground_truth"], "rounds": rounds,
+            "evidence_id_map": evidence_id_map,
+            "events": events, "partial_round": partial_round,
             "duration_seconds": round(time.monotonic() - started, 3),
         }
 
@@ -399,6 +444,7 @@ def run_match(
         for episode in scenario["episodes"]:
             round_number = int(episode["round"])
             stage = f"round_{round_number}_setup"
+            partial_round = {"round": round_number, "intents": {}, "final_moves": {}}
 
             delivered_now = pending_verifications
             pending_verifications = []
@@ -410,6 +456,9 @@ def run_match(
             for seat in ("a", "b"):
                 for item in episode["evidence"].get(seat, []):
                     known_evidence[seat][item["id"]] = item
+
+            for item in episode["evidence"].get("mediator", []):
+                neutral_evidence[item["id"]] = item
 
             evidence_a = list(known_evidence["a"].values())
             evidence_b = list(known_evidence["b"].values())
@@ -440,6 +489,7 @@ def run_match(
                         ),
                     },
                 ],
+                event_sink=record_event,
                 seed=_seed(seed, round_number, 1),
                 validator=lambda value: validate_actor_intent(
                     value,
@@ -448,6 +498,7 @@ def run_match(
                 ),
             )
             attempts["a"].extend(attempt_list)
+            partial_round["intents"]["a"] = intent_a
 
             stage = f"round_{round_number}_intent_b"
             intent_b, attempt_list = _call_for_json(
@@ -467,6 +518,7 @@ def run_match(
                         ),
                     },
                 ],
+                event_sink=record_event,
                 seed=_seed(seed, round_number, 2),
                 validator=lambda value: validate_actor_intent(
                     value,
@@ -475,8 +527,13 @@ def run_match(
                 ),
             )
             attempts["b"].extend(attempt_list)
+            partial_round["intents"]["b"] = intent_b
 
-            mediator_known = set(intent_a["evidence_ids"]) | set(intent_b["evidence_ids"])
+            mediator_known.update(intent_a["evidence_ids"])
+            mediator_known.update(intent_b["evidence_ids"])
+            for previous in rounds:
+                for move in previous["final_moves"].values():
+                    mediator_known.update(move["evidence_ids"])
             mediator_known.update(
                 item["id"] for item in episode["evidence"].get("mediator", [])
             )
@@ -502,10 +559,11 @@ def run_match(
                                 interventions_left=interventions_left,
                                 verifiable_ids=verifiable_ids,
                                 verifications=completed_verifications,
-                                neutral_evidence=episode["evidence"].get("mediator", []),
+                                neutral_evidence=list(neutral_evidence.values()),
                             ),
                         },
                     ],
+                    event_sink=record_event,
                     seed=_seed(seed, round_number, 3),
                     validator=lambda value: validate_mediator(
                         value,
@@ -517,6 +575,7 @@ def run_match(
             else:
                 mediator = _empty_mediator()
 
+            partial_round["mediator"] = mediator
             if mediator["intervene"]:
                 interventions_used += 1
                 if mediator["channel"] == "verify":
@@ -546,9 +605,15 @@ def run_match(
                             opponent_intent=intent_b,
                             mediator=mediator,
                             known_ids=known_ids_a,
+                            context=_actor_context(
+                                scenario=scenario, seat="a", state=state, episode=episode,
+                                evidence=evidence_a, verifications=completed_verifications,
+                                rounds=rounds,
+                            ),
                         ),
                     },
                 ],
+                event_sink=record_event,
                 seed=_seed(seed, round_number, 4),
                 validator=lambda value: _validate_visible_final(
                     value,
@@ -559,6 +624,7 @@ def run_match(
                 ),
             )
             attempts["a"].extend(attempt_list)
+            partial_round["final_moves"]["a"] = final_a
 
             stage = f"round_{round_number}_final_b"
             final_b, attempt_list = _call_for_json(
@@ -574,9 +640,15 @@ def run_match(
                             opponent_intent=intent_a,
                             mediator=mediator,
                             known_ids=known_ids_b,
+                            context=_actor_context(
+                                scenario=scenario, seat="b", state=state, episode=episode,
+                                evidence=evidence_b, verifications=completed_verifications,
+                                rounds=rounds,
+                            ),
                         ),
                     },
                 ],
+                event_sink=record_event,
                 seed=_seed(seed, round_number, 5),
                 validator=lambda value: _validate_visible_final(
                     value,
@@ -587,6 +659,7 @@ def run_match(
                 ),
             )
             attempts["b"].extend(attempt_list)
+            partial_round["final_moves"]["b"] = final_b
 
             stage = f"round_{round_number}_resolution"
             resolution = resolve_round(
@@ -611,6 +684,8 @@ def run_match(
                     "attempts": attempts,
                 }
             )
+
+            partial_round = {}
 
         stage = "scoring"
         scores = score_match(

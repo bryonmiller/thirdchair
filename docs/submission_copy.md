@@ -1,5 +1,7 @@
 # ChinaTalk submission copy
 
+> Archived August 2026 contest material. For the repaired baseline and current limitations, see [audit repairs](audit_repairs.md) and [the current protocol](preregistration.md).
+
 ## Name
 
 Bryon Miller
@@ -26,11 +28,11 @@ The Third Chair puts three AI models into a fictional cyber crisis. Two advise r
 
 ## Microsite
 
-https://bryonmiller.github.io/third-chair/
+https://thirdchair.bryonmiller.com
 
 ## GitHub repository
 
-https://github.com/bryonmiller/third-chair
+https://github.com/bryonmiller/thirdchair
 
 ## Interest in working for ChinaTalk
 

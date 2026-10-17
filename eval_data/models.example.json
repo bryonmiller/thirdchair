@@ -7,7 +7,7 @@
       "api_key_env": "OPENROUTER_API_KEY",
       "temperature": 0.2,
       "extra_headers": {
-        "HTTP-Referer": "https://github.com/bryonmiller/third-chair",
+        "HTTP-Referer": "https://github.com/bryonmiller/thirdchair",
         "X-Title": "Third Chair"
       }
     },
@@ -18,7 +18,7 @@
       "api_key_env": "OPENROUTER_API_KEY",
       "temperature": 0.2,
       "extra_headers": {
-        "HTTP-Referer": "https://github.com/bryonmiller/third-chair",
+        "HTTP-Referer": "https://github.com/bryonmiller/thirdchair",
         "X-Title": "Third Chair"
       }
     },
@@ -29,7 +29,7 @@
       "api_key_env": "OPENROUTER_API_KEY",
       "temperature": 0.2,
       "extra_headers": {
-        "HTTP-Referer": "https://github.com/bryonmiller/third-chair",
+        "HTTP-Referer": "https://github.com/bryonmiller/thirdchair",
         "X-Title": "Third Chair"
       }
     }

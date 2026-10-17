@@ -1,5 +1,7 @@
 # The Third Chair
 
+> Archived August 2026 contest material. For the repaired baseline and current limitations, see [audit repairs](audit_repairs.md) and [the current protocol](preregistration.md).
+
 **A rotating model tournament for cyber-crisis mediation**
 
 Bryon Miller | August 2026 | Version 0.3.0
