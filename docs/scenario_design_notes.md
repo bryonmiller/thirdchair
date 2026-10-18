@@ -9,14 +9,14 @@ The scenarios need enough structure to score but enough room for the models to s
 - political motive that does not settle technical responsibility;
 - at least one official-looking false item;
 - a registered neutral verification result;
-- evidence that changes the correct posture over time; and
+- evidence that changes the support for attribution over time; and
 - an action ladder with reversible and irreversible options.
 
 The fictional names reduce direct associations with real countries. The cases still use recognizable government problems: alliance votes, sanctions, smuggling, peace talks, attribution, and public pressure.
 
 ## Truth balance
 
-Two cases end with a nonstate perpetrator. One ends with State B responsibility. This prevents the test from rewarding a model that always exonerates states or always calls for delay.
+Two cases end with a nonstate perpetrator. One ends with State B responsibility. This is an imbalanced development set, and responsibility is confounded with story family. It does not prevent the cost metric from rewarding blanket restraint. Report outcomes by case and responsibility; use coherent guilty/innocent variants across families before generalization claims.
 
 The archive-leak scenario matters most for construct validity. Without it, a mediator could score well by treating every attribution claim as reckless.
 
@@ -33,6 +33,8 @@ These objectives are constrained. A state model cannot invent authorities, evide
 The mediator does not see private briefs or private reasons. It sees public positions and whatever evidence IDs the states bring into the conversation. This keeps the task closer to real mediation and makes evidence authentication useful.
 
 Giving the mediator the answer key would test message writing, not diagnosis.
+
+An opaque citation also fails to communicate the contents of a private claim. The mediator can verify that ID, but cannot reliably choose it for a substantive reason unless its meaning is disclosed. Treat this as an information-access constraint, not automatic evidence of deficient reasoning. The 0.5.0 port intervention and [methodology review](methodology_review.md) separate these questions. Neutral links currently point to fabricated documents in all three families; this cue must vary in a later benchmark.
 
 ## Why verification is delayed
 

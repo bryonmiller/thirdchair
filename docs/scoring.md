@@ -1,5 +1,7 @@
 # Scoring guide: audited baseline 0.4.0
 
+The numerical engine remains `baseline-0.4.0` in release 0.5.0. A separately labeled `evidence-audit-1` measurement supplement now exposes paired Brier improvement, scenario-specific denominators, wrong-target actions, action timing, trajectories, and component costs. See [measurement definitions and limits](methodology_review.md#measurement-specification). Older logs can be reanalyzed without changing their original scores; label that analysis post-hoc and keep source cohorts separate.
+
 ## Design rule
 
 The engine scores structured actions and evidence use. It does not ask another model whether the dialogue sounds wise, polite, or diplomatic.

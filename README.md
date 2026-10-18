@@ -4,9 +4,11 @@ Two models play rival governments during a cyber crisis. A third gets two chance
 
 This is a runnable evaluation for the ChinaTalk Evals for the Situation Room contest. It puts models in a competitive, multi-turn setting with private information, public pressure, forged evidence, and actions that change the next round.
 
-**Version 0.4.3 adds explicit neutral verification target links after exploratory pilot failures, retaining controlled OpenRouter configuration and the repaired descriptive baseline.** No empirical model results or trained policies are included. Context handling, evidence stances, logging, pairing and safety summaries have regression tests. The consequence model still favors restraint and is not suitable for RL training or broad claims about diplomatic competence.
+**Version 0.5.0 adds a literature-informed, post-pilot measurement and information-access follow-up.** It includes paired attribution measures, scenario-specific failure reporting, a scripted verification comparator, and an opt-in public-disclosure variant. No trained policy is included. The consequence model still favors restraint and is not suitable for RL training or broad claims about diplomatic competence. The original three scenario files and numerical engine remain unchanged from 0.4.3.
 
 Start with [audit repairs and remaining limits](docs/audit_repairs.md), the [current pilot protocol](docs/preregistration.md), and the [bounded research roadmap](docs/research_roadmap.md). The original [0.3.0 source snapshot](https://github.com/bryonmiller/thirdchair/tree/757334b77d2aa3dd110f490897775a26fdcb929a) and [protocol](docs/legacy/preregistration-0.3.0.md) remain identifiable. Scores and response schemas changed; do not pool the versions.
+
+For new work, read the [methodology review and primary literature](docs/methodology_review.md) and [0.5.0 development protocol](docs/followup_protocol.md). The next question concerns evidence-sensitive crisis assistance. The simulator does not implement negotiated settlements, utilities, or lasting peace. Completed 0.4.3 results remain an exploratory baseline, not a confirmatory evaluation.
 
 ## What the tournament tests
 
@@ -18,7 +20,7 @@ Each match has three seats:
 
 The state models receive different private briefs. They announce a posture, hear the other side, receive any mediator message, and make a final move. The mediator can use a joint channel, send a private message, or spend an intervention to authenticate one disputed evidence item. A verification result arrives in the next round.
 
-Every active-mediator match has an empty-chair twin with the same scenario, role assignment, and seed. The main result is mediation lift: crisis cost without the mediator minus crisis cost with the mediator.
+Every active-mediator match has an independently executed empty-chair counterpart with the same scenario, role assignment, and seed. Mediation lift is crisis cost without the mediator minus crisis cost with the mediator. The new follow-up prioritizes reported attribution Brier error and keeps cost as a separate modeled outcome.
 
 Lower tension alone is not enough. The intended research question concerns false concessions and abandoned accountability. The current automated false-peace predicate covers only a narrow subset, so these broader outcomes require human review and a new consequence model.
 
@@ -95,7 +97,14 @@ OpenRouter runs require one `provider.only` entry, disabled provider fallbacks, 
 
 ## Measures
 
-The primary measure is mediation lift. The report also shows:
+The follow-up's primary descriptive contrast is paired attribution Brier improvement. Historical fields remain available; the measurement supplement adds:
+
+- active and empty Brier error, their paired difference, and per-round reported probabilities;
+- false public attribution and wrong-target actions, with eligible denominators;
+- scenario/configuration-specific completion rates and conservative Brier missingness bounds;
+- verification choices, voluntary abstention, budget-forced holds, and unweighted cost components.
+
+The original report also shows:
 
 - whether the active mediator prevents critical escalation;
 - absolute active/control false-peace rates and newly introduced failures;
@@ -111,6 +120,7 @@ The crisis engine is deterministic. It updates escalation, civilian harm, econom
 ```text
 docs/                    Protocol, preregistration, annotation guide, and contest copy
 eval_data/scenarios/     Three complete crisis games and sealed answer keys
+eval_data/variants/      Opt-in development interventions, excluded from --scenario all
 eval_data/schemas/       Structured response contracts
 results/                 Result policy and generated tournament records
 site/                    Plain static microsite for GitHub Pages or a custom domain
@@ -123,6 +133,8 @@ tests_py/                Standard-library tests with fixed model fixtures
 This is a small tournament, not a claim about diplomacy in general. The state agents are models, not people. Outcomes depend on prompt wording, provider settings, sampling, and the models chosen as opponents. The numeric crisis engine makes comparisons reproducible, but its weights remain design judgments and should receive expert review.
 
 Runtime evidence IDs are replaced with seed-dependent opaque labels, removing the forged-item suffix cue. The original three narratives and disclosure timing remain public and fixed. Public scenarios may enter training data. A later study should use held-back cases and human review of the transcripts, especially the mediator's treatment of deception, face-saving, and private threats.
+
+Use `--scenario port-disclosure` for the original port case plus its information-access variant. With fixed actors, `--mediator-policy linked-verification` selects the local scripted comparator; actors still use paid APIs. `--order-seed` randomizes paired blocks and condition order within a command. See the follow-up protocol before collecting new data. Use new output files for 0.5.0; prompt clarifications make it incompatible with old controls.
 
 ## Why this fits the author
 

@@ -57,13 +57,15 @@ def seat_config(seat: Any) -> dict[str, Any]:
 
 
 def run_manifest(
-    scenario: dict[str, Any], seats: dict[str, Any], evidence_id_mode: str = "opaque"
+    scenario: dict[str, Any], seats: dict[str, Any], evidence_id_mode: str = "opaque",
+    *, order_seed: int | None = None,
 ) -> dict[str, Any]:
     value = {
         "package_version": __version__,
         "scoring_version": SCORING_VERSION,
         "control_design": "independent_matched_runs",
         "evidence_id_mode": evidence_id_mode,
+        "execution_order_seed": order_seed,
         "source_sha256": source_digest(),
         "scenario_sha256": fingerprint(scenario),
         "roles": {role: seat_config(seat) for role, seat in seats.items()},

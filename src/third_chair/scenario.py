@@ -52,6 +52,39 @@ def load_scenario(path: str | Path) -> dict[str, Any]:
         for items in episode["evidence"].values()
         for item in items
     }
+    all_items = [item for episode in data["episodes"]
+                 for items in episode["evidence"].values() for item in items]
+    if len(evidence_rounds) != len(all_items):
+        raise ValueError("Evidence IDs must be globally unique; use public_disclosures to share cards")
+    if any(type(item.get("valid")) is not bool for item in all_items):
+        raise ValueError("Evidence validity must be an evaluator-only boolean")
+    if not set(data["verification_results"]) <= set(evidence_rounds):
+        raise ValueError("Verification results must reference existing evidence")
+    for key, result in data["verification_results"].items():
+        card = next(item for item in all_items if item["id"] == key)
+        if type(result.get("valid")) is not bool or result["valid"] != card["valid"]:
+            raise ValueError("Verification validity must agree with its evidence card")
+    for field in ("forged_evidence_ids", "decisive_evidence_ids"):
+        if not set(data["ground_truth"].get(field, [])) <= set(evidence_rounds):
+            raise ValueError(f"{field} must reference existing evidence")
+    forged = set(data["ground_truth"].get("forged_evidence_ids", []))
+    if any(item["valid"] for item in all_items if item["id"] in forged):
+        raise ValueError("Forged evidence cannot be marked valid")
+    disclosed: set[str] = set()
+    for episode in data["episodes"]:
+        ids = episode.get("public_disclosures", [])
+        if (not isinstance(ids, list) or not all(isinstance(key, str) for key in ids)
+                or len(ids) != len(set(ids)) or disclosed.intersection(ids)
+                or any(key not in evidence_rounds or evidence_rounds[key] > episode["round"]
+                       for key in ids)):
+            raise ValueError("public_disclosures must contain unique, existing, non-future IDs")
+        disclosed.update(ids)
+    design = data.get("design", {})
+    if not isinstance(design, dict):
+        raise ValueError("Scenario design metadata must be an object")
+    for field in ("family_id", "evidence_namespace"):
+        if field in design and (not isinstance(design[field], str) or not design[field].strip()):
+            raise ValueError(f"design.{field} must be a non-empty string")
     for episode in data["episodes"]:
         for seat, items in episode["evidence"].items():
             for item in items:
@@ -87,7 +120,8 @@ def opaque_evidence_ids(
     """
     ids = {item["id"] for episode in scenario["episodes"]
            for evidence in episode["evidence"].values() for item in evidence}
-    salt = f"{scenario['id']}:{seed}:{repetition}:evidence-v1:"
+    namespace = scenario.get("design", {}).get("evidence_namespace", scenario["id"])
+    salt = f"{namespace}:{seed}:{repetition}:evidence-v1:"
     ordered = sorted(ids, key=lambda item: hashlib.sha256((salt + item).encode()).hexdigest())
     mapping = {old: f"E{index:03d}" for index, old in enumerate(ordered, 1)}
     pattern = re.compile(r"(?<![A-Za-z0-9_-])(?:" + "|".join(
@@ -104,6 +138,15 @@ def opaque_evidence_ids(
         return value
 
     return replace(copy.deepcopy(scenario)), mapping
+
+
+def disclosed_evidence(scenario: dict[str, Any], round_number: int) -> list[dict[str, Any]]:
+    """Return cards explicitly made public by this point, never future disclosures."""
+    ids = [key for episode in scenario["episodes"] if episode["round"] <= round_number
+           for key in episode.get("public_disclosures", [])]
+    cards = {item["id"]: item for episode in scenario["episodes"]
+             for items in episode["evidence"].values() for item in items}
+    return [cards[key] for key in ids]
 
 
 def evidence_text(items: list[dict[str, Any]]) -> str:

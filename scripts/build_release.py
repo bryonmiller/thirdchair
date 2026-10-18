@@ -32,6 +32,7 @@ SOURCE_DIRS = [
     ".github",
     "docs",
     "eval_data/scenarios",
+    "eval_data/variants",
     "eval_data/schemas",
     "results",
     "scripts",
@@ -108,9 +109,9 @@ def sha256(path: Path) -> str:
 def build_manifest(files: list[Path]) -> Path:
     manifest = {
         "project": "The Third Chair",
-        "version": "0.4.3",
+        "version": "0.5.0",
         "author": "Bryon Miller",
-        "research_status": "Audited descriptive baseline; comparative pilot and RL environment not run",
+        "research_status": "Post-pilot methodology follow-up; no confirmatory study or trained policy",
         "intended_repository": "https://github.com/bryonmiller/thirdchair",
         "intended_microsite": "https://thirdchair.bryonmiller.com",
         "files": [

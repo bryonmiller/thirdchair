@@ -10,6 +10,7 @@ from typing import Any, Iterable
 
 from . import __version__
 from .provenance import fingerprint
+from .measurement import measurement_report, pair_measures
 
 
 def load_records(paths: Iterable[str | Path]) -> list[dict[str, Any]]:
@@ -160,6 +161,7 @@ def summarize_records(records: list[dict[str, Any]]) -> dict[str, Any]:
                 "lift_per_intervention": round(lift / used, 2) if used else None,
                 "active_match_id": active.get("match_id"),
                 "empty_match_id": empty.get("match_id"),
+                **pair_measures(active, empty),
             }
         )
 
@@ -266,8 +268,15 @@ def summarize_records(records: list[dict[str, Any]]) -> dict[str, Any]:
     unpaired = len(successful) - 2 * len(pairs)
     if unpaired:
         warnings.append(f"{unpaired} successful records have no compatible active/empty counterpart.")
-    warnings.append("Rotating mediator rows with different actor configurations are not a causal ranking.")
+    actor_configs = {fingerprint({role: item["roles"][role] for role in ("a", "b")})
+                     for item in records}
+    if len(actor_configs) > 1:
+        warnings.append("Rotating mediator rows with different actor configurations are not a causal ranking.")
+    else:
+        warnings.append("Fixed-actor comparisons are conditional on this actor configuration and scenario set.")
     warnings.append("False peace is the narrow legacy predicate, not a complete accountability measure.")
+    warnings.append("Reported probabilities are model outputs, not validated private beliefs; Brier accuracy is not calibration.")
+    warnings.append("Repeated calls and evidence-ID permutations within a scenario are not independent crisis families.")
     return {
         "schema_version": __version__,
         "warnings": warnings,
@@ -279,6 +288,7 @@ def summarize_records(records: list[dict[str, Any]]) -> dict[str, Any]:
         "mediators": mediator_rows,
         "actors": actor_rows,
         "pairs": pairs,
+        "measurement": measurement_report(records, pairs, {id(item) for item in eligible}),
         "failures": [
             {
                 "match_id": item.get("match_id"),
@@ -302,7 +312,7 @@ def render_markdown(summary: dict[str, Any]) -> str:
         f"Complete active/empty pairs: {summary['complete_active_empty_pairs']}",
         f"Failed matches: {summary['failed_matches']}",
         "",
-        "## Mediator results",
+        "## Descriptive mediator results (complete pairs only)",
         "",
         "| Model (A / B; cohort) | Pairs | Median lift | Gated win rate | Legacy truth | Active false peace | Critical escalation | Lift / intervention |",
         "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
@@ -336,6 +346,17 @@ def render_markdown(summary: dict[str, Any]) -> str:
             lines.append(
                 f"- {item['match_id'] or 'unknown match'}: {item['failure_stage']} - {item['error']}"
             )
+    lines.extend(["", "## Scenario-specific attribution and reliability", "",
+                  "Brier improvement is empty minus active (positive is better). Rates in JSON use 0 to 1.", "",
+                  "| Scenario / mediator | Complete pairs | Failed active / empty | Mean Brier improvement | Active false public attribution (eligible n) |",
+                  "| --- | ---: | ---: | ---: | --- |"])
+    for cell in summary.get("measurement", {}).get("cells", []):
+        a, e = cell["modes"]["active"], cell["modes"]["empty"]
+        rate = a["false_public_attribution_final_rate"]
+        display = "N/A" if rate is None else f"{100 * rate:.1f}%"
+        lines.append(f"| {cell['scenario_id']} / {cell['mediator']} | {cell['complete_pairs']} | "
+                     f"{a['failed']} / {e['failed']} | {cell['mean_brier_improvement_complete_pairs']} | "
+                     f"{display} ({a['wrong_attribution_eligible_matches']}) |")
     lines.extend(["", "## Interpretation limits", "", *[f"- {w}" for w in summary.get("warnings", [])]])
     lines.extend(
         [

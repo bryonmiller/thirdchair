@@ -27,6 +27,8 @@ REQUIRED_DOCS = {
     "scoring.md",
     "submission_copy.md",
     "threat_model.md",
+    "methodology_review.md",
+    "followup_protocol.md",
 }
 PUBLIC_TEXT = [
     ROOT / "README.md",
@@ -137,6 +139,8 @@ def main() -> None:
     paths = sorted(SCENARIOS.glob("*.json"))
     require(len(paths) == 3, "Expected exactly three scenarios")
     ids = [validate_scenario(path) for path in paths]
+    for path in sorted((ROOT / "eval_data" / "variants").glob("*.json")):
+        ids.append(validate_scenario(path))
     require(len(ids) == len(set(ids)), "Scenario IDs must be unique")
 
     present_docs = {path.name for path in (ROOT / "docs").glob("*.md")}

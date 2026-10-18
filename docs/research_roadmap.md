@@ -1,5 +1,7 @@
 # Bounded research direction
 
+The [0.5.0 methodology review](methodology_review.md) and [bounded information-access follow-up](followup_protocol.md) take precedence for immediate work. The environment and RL work below remains a proposal. The September 2026 [ProMediConv preprint](https://arxiv.org/html/2609.11101v1) also trains a mediation strategy planner with RL, so the earlier novelty assessment must not treat learned strategy selection or predefined instructions as an open contribution by itself.
+
 ## Question and contribution
 
 Can a mediator selecting bounded messages, verification or abstention reduce modeled harm while preserving evidence and legitimate inquiry under adversarial uncertainty?

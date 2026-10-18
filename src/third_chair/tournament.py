@@ -6,11 +6,13 @@ import itertools
 import json
 import math
 import os
+import random
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterable
 
 from .client import OpenAICompatibleClient, is_openrouter
+from .policies import POLICY_LABEL, POLICY_NAME
 from .runner import ModelSeat, run_match
 from .provenance import MAX_TOKENS, fingerprint, pair_identity, run_manifest, seat_config, source_digest
 from .scenario import load_scenario
@@ -207,6 +209,8 @@ def build_schedule(
     seed: int | None,
     fixed_a: str | None = None,
     fixed_b: str | None = None,
+    mediator_policy: str = "llm",
+    order_seed: int | None = None,
 ) -> list[dict[str, Any]]:
     if repetitions < 1:
         raise ValueError("repetitions must be at least one")
@@ -216,6 +220,10 @@ def build_schedule(
         raise ValueError("Specify both fixed actor labels")
     if fixed_a and (fixed_a not in labels or fixed_b not in labels):
         raise ValueError("Fixed actors must be configured model labels")
+    if mediator_policy not in {"llm", POLICY_NAME}:
+        raise ValueError("Unknown mediator policy")
+    if mediator_policy != "llm" and (not fixed_a or POLICY_LABEL in labels):
+        raise ValueError("Scripted mediation requires fixed actors and a non-reserved model label")
     if not modes or len(modes) != len(set(modes)) or not set(modes) <= {"active", "empty"}:
         raise ValueError("modes must contain active, empty, or both")
     schedule: list[dict[str, Any]] = []
@@ -223,12 +231,16 @@ def build_schedule(
     if not paths or len({p.resolve() for p in paths}) != len(paths):
         raise ValueError("Use a non-empty list of distinct scenario paths")
     scenario_ids: set[str] = set()
+    family_indices: dict[str, int] = {}
     for scenario_index, scenario_path in enumerate(paths):
         scenario = load_scenario(scenario_path)
         if scenario["id"] in scenario_ids:
             raise ValueError("Scenario IDs must be unique within a schedule")
         scenario_ids.add(scenario["id"])
-        role_sets = ([(fixed_a, fixed_b, label) for label in sorted(labels)] if fixed_a else
+        family = scenario.get("design", {}).get("family_id", scenario["id"])
+        family_index = family_indices.setdefault(family, len(family_indices))
+        mediator_labels = [POLICY_LABEL] if mediator_policy != "llm" else sorted(labels)
+        role_sets = ([(fixed_a, fixed_b, label) for label in mediator_labels] if fixed_a else
                      assignments(labels, rotation, reverse=bool(scenario_index % 2)))
         for repetition in range(1, repetitions + 1):
             for assignment_index, (a, b, mediator) in enumerate(role_sets):
@@ -236,7 +248,7 @@ def build_schedule(
                     None
                     if seed is None
                     else seed
-                    + scenario_index * 1_000_000
+                    + family_index * 1_000_000
                     + repetition * 10_000
                     + (0 if fixed_a else assignment_index) * 100
                 )
@@ -260,15 +272,25 @@ def build_schedule(
                             "mode": mode,
                             "repetition": repetition,
                             "seed": pair_seed,
+                            "mediator_policy": mediator_policy,
+                            "order_seed": order_seed,
                         }
                     )
+    if order_seed is not None:
+        # Keep paired conditions adjacent, randomize pair order and within-pair order.
+        blocks = [schedule[i:i + len(modes)] for i in range(0, len(schedule), len(modes))]
+        rng = random.Random(order_seed)
+        rng.shuffle(blocks)
+        for block in blocks:
+            rng.shuffle(block)
+        schedule = [item for block in blocks for item in block]
     return schedule
 
 
 def estimate_calls(schedule: list[dict[str, Any]]) -> int:
     total = 0
     for item in schedule:
-        per_round = 5 if item["mode"] == "active" else 4
+        per_round = 5 if item["mode"] == "active" and item.get("mediator_policy", "llm") == "llm" else 4
         total += int(item["rounds"]) * per_round
     return total
 
@@ -303,12 +325,17 @@ def run_schedule(
     existing = _read_jsonl(output_path)
     completed: set[str] = set()
     source_hash = source_digest()
+    order_seeds = {item.get("order_seed") for item in schedule}
+    if len(order_seeds) != 1:
+        raise ValueError("Use one execution-order seed per schedule")
     for record in existing:
         if record.get("run_status") not in {"succeeded", "failed"}:
             raise ValueError("Output contains an unfinished match; preserve it and use a new output")
         manifest = record.get("manifest")
         if not manifest or manifest.get("source_sha256") != source_hash:
             raise ValueError("Output has missing/incompatible provenance; use a new output path")
+        if manifest.get("execution_order_seed") not in order_seeds:
+            raise ValueError("Execution-order seed changed; use a new output path")
         for role in ("a", "b", "mediator"):
             previous = manifest["roles"][role]
             label = previous["label"]
@@ -327,7 +354,8 @@ def run_schedule(
         scenario = load_scenario(item["scenario_path"])
         if fingerprint(scenario) != item["scenario_sha256"]:
             raise ValueError("Scenario changed after planning; rebuild the schedule")
-        manifest = run_manifest(scenario, {role: model_seats[item[role]] for role in ("a", "b", "mediator")})
+        manifest = run_manifest(scenario, {role: model_seats[item[role]] for role in ("a", "b", "mediator")},
+                                order_seed=item.get("order_seed"))
         for previous in existing:
             if previous["scenario_id"] == item["scenario_id"] and previous["manifest"]["scenario_sha256"] != manifest["scenario_sha256"]:
                 raise ValueError("Scenario changed; use a new output path")
@@ -343,8 +371,11 @@ def run_schedule(
             scenario_path=item["scenario_path"], model_a=model_seats[item["a"]],
             model_b=model_seats[item["b"]], mediator_model=model_seats[item["mediator"]],
             mode=item["mode"], repetition=item["repetition"], seed=item["seed"],
+            order_seed=item.get("order_seed"),
             event_sink=lambda event: _append_jsonl(events_path, event),
         )
         if record["match_id"] != item["match_id"]:
             raise RuntimeError("Configuration changed during execution; inspect the event journal")
+        record["execution_position"] = next(i for i, row in enumerate(bound, 1)
+                                            if row["match_id"] == item["match_id"])
         _append_jsonl(output_path, record)

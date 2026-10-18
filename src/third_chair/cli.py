@@ -7,6 +7,8 @@ import json
 from pathlib import Path
 
 from .analysis import load_records, render_markdown, summarize_records
+from .policies import LinkedVerificationPolicy, POLICY_LABEL, POLICY_NAME
+from .runner import ModelSeat
 from .scenario import evidence_text, load_scenario
 from .tournament import (
     build_model_seats,
@@ -23,6 +25,9 @@ SCENARIOS = ROOT / "eval_data" / "scenarios"
 
 
 def _scenario_paths(value: str) -> list[Path]:
+    if value == "port-disclosure":
+        return [SCENARIOS / "port-sanctions.json",
+                ROOT / "eval_data" / "variants" / "port-sanctions-disclosed.json"]
     if value == "all":
         return sorted(SCENARIOS.glob("*.json"))
     path = Path(value)
@@ -74,6 +79,8 @@ def _schedule_from_args(args: argparse.Namespace):
         seed=args.seed,
         fixed_a=args.actor_a,
         fixed_b=args.actor_b,
+        mediator_policy=args.mediator_policy,
+        order_seed=args.order_seed,
     )
 
 
@@ -86,6 +93,7 @@ def _cmd_plan(args: argparse.Namespace) -> int:
     empty = sum(item["mode"] == "empty" for item in schedule)
     print(f"Active mediator matches: {active}")
     print(f"Empty-chair matches: {empty}")
+    print(f"Mediator policy: {args.mediator_policy}; execution-order seed: {args.order_seed}")
     return 0
 
 
@@ -94,9 +102,13 @@ def _cmd_run(args: argparse.Namespace) -> int:
     issues = configuration_issues(configs)
     if issues:
         raise ValueError("Configuration is not ready:\n" + "\n".join(issues))
+    model_seats = build_model_seats(configs)
+    if args.mediator_policy == POLICY_NAME:
+        model_seats[POLICY_LABEL] = ModelSeat(POLICY_LABEL, LinkedVerificationPolicy(),
+                                            temperature=None, max_tokens=1, send_seed=False)
     run_schedule(
         schedule=schedule,
-        model_seats=build_model_seats(configs),
+        model_seats=model_seats,
         output=args.output,
     )
     print(f"Wrote {args.output}")
@@ -156,6 +168,9 @@ def build_parser() -> argparse.ArgumentParser:
         sub.add_argument("--rotation", choices=["balanced", "full"], default="balanced")
         sub.add_argument("--actor-a", help="Fix State A across all mediator candidates")
         sub.add_argument("--actor-b", help="Fix State B across all mediator candidates")
+        sub.add_argument("--mediator-policy", choices=["llm", POLICY_NAME], default="llm")
+        sub.add_argument("--order-seed", type=int,
+                         help="Shuffle paired blocks and condition order reproducibly")
         sub.add_argument("--modes", default="active,empty")
         sub.add_argument("--repetitions", type=int, default=1)
         sub.add_argument("--seed", type=int, default=4100)
