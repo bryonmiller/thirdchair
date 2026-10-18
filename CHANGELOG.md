@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.6.1 - 2026-10-18
+
+Repair a public-context omission identified during prompt inspection. Requests are stateless, but earlier public event reports were absent from history; only actor messages and state updates remained. A delayed mediator could receive a document-authenticity result without the earlier public report explaining the document's claim.
+
+- Include past public events in the shared history renderer for both actors and the mediator, including the structured mediator observation. Reports retain their original wording and chronology; their presence is not an authenticity endorsement.
+- Add regression checks across all three original scenarios for event retention and future-event exclusion, plus the delayed port check with private evidence still excluded.
+- Keep the scenario content, numerical engine, check schedule, response instructions, and measurements unchanged. Do not prescribe the direction of attribution updates or require a particular outcome.
+
+Migration: all subsequent-round actor and mediator prompts change. Preserve 0.6.0 logs and its protocol; use fresh 0.6.1 results and controls. The [repair protocol](docs/public_history_repair.md) specifies one bounded eight-match smoke and retains the review gate for larger research. No live-model outcome is established by this patch.
+
 ## 0.6.0 - 2026-10-18
 
 Post-pilot engineering diagnostic for communication after verification. No live 0.6.0 outcome or learned policy is established by this release.

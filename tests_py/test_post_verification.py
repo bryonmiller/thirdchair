@@ -46,6 +46,30 @@ def fixture(policy=DELAYED_MESSAGE, mode="active", mediator=None, cite_target=Tr
 
 
 class PostVerificationTests(unittest.TestCase):
+    def test_delayed_mediator_sees_public_claim_behind_checked_document(self):
+        a = []
+        for evidence in (["P01"], ["P06-P"], ["P08"]):
+            a.extend([actor_intent(80, "harden_hotline", evidence),
+                      actor_final(80, "harden_hotline", evidence, accepts=False)])
+        models = seats(a=a, mediator=[chair("joint")])
+        record = run_match(scenario_path=PORT, model_a=models["A"], model_b=models["B"],
+                           mediator_model=models["M"], mode="active", repetition=1,
+                           seed=18, evidence_id_mode="original", mediator_policy=DELAYED_MESSAGE)
+        self.assertEqual(record["run_status"], "succeeded", record.get("error"))
+        self.assertEqual(len(models["M"].client.calls), 1)
+        prompt = "\n".join(m["content"] for m in models["M"].client.calls[0]["messages"])
+        scenario = load_scenario(PORT)
+        self.assertIn(scenario["episodes"][1]["public_event"], prompt)
+        self.assertIn(scenario["verification_results"]["P06-P"]["content"], prompt)
+        self.assertIn(scenario["episodes"][1]["public_event"],
+                      record["rounds"][2]["mediator_observation"]["history"])
+        for seat in ("a", "b"):
+            self.assertNotIn(scenario["seats"][seat]["private_brief"], prompt)
+            for episode in scenario["episodes"]:
+                for card in episode["evidence"][seat]:
+                    self.assertNotIn(card["content"], prompt)
+        self.assertNotIn(scenario["ground_truth"]["note"], prompt)
+
     def test_mixed_schedule_executes_with_opaque_ids_and_resumes_without_replaying_calls(self):
         class EvidenceClient(CaptureClient):
             def chat(self, messages, **kwargs):

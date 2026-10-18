@@ -78,6 +78,25 @@ def fixture_pair(active_false=False, empty_false=False):
 
 
 class ContextTests(unittest.TestCase):
+    def test_all_roles_retain_public_events_without_future_events(self):
+        for path in sorted((ROOT / "eval_data/scenarios").glob("*.json")):
+            with self.subTest(scenario=path.stem):
+                scenario = load_scenario(path)
+                models = seats()
+                record = run_match(scenario_path=path, model_a=models["A"],
+                                   model_b=models["B"], mediator_model=models["M"],
+                                   mode="active", repetition=1, seed=12)
+                self.assertEqual(record["run_status"], "succeeded")
+                for label in ("A", "B", "M"):
+                    for index, call in enumerate(models[label].client.calls):
+                        round_number = index + 1 if label == "M" else index // 2 + 1
+                        prompt = "\n".join(m["content"] for m in call["messages"])
+                        for episode in scenario["episodes"]:
+                            self.assertEqual(episode["public_event"] in prompt,
+                                             episode["round"] <= round_number,
+                                             (path.stem, label, round_number, episode["round"]))
+                        self.assertNotIn(scenario["ground_truth"]["note"], prompt)
+
     def test_neutral_links_identify_checkable_targets_without_exposing_evidence(self):
         for path in sorted((ROOT / "eval_data/scenarios").glob("*.json")):
             with self.subTest(scenario=path.stem):

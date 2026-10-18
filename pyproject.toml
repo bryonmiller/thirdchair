@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "third-chair"
-version = "0.6.0"
+version = "0.6.1"
 description = "A rotating model tournament for cyber-crisis mediation"
 readme = "README.md"
 requires-python = ">=3.11"

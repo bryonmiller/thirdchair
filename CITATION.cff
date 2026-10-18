@@ -2,7 +2,7 @@ cff-version: 1.2.0
 message: "If you use Third Chair, please cite it with the metadata below."
 title: "The Third Chair: a rotating model tournament for cyber-crisis mediation"
 type: software
-version: 0.6.0
+version: 0.6.1
 date-released: 2026-10-18
 authors:
   - family-names: Miller

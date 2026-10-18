@@ -8,13 +8,15 @@ The central research question remains: **Can AI mediators de-escalate simulated 
 
 **Version 0.6.0 adds a controlled post-verification communication diagnostic.** It fixes the third model as mediator, schedules a check in round two, and reserves round three for its joint message. A verification-only policy and empty-chair controls share one randomized schedule. See the [eight-match engineering smoke protocol and commands](docs/post_verification_protocol.md). Timing is imposed by the protocol; this is not a test of autonomous timing or trained policy performance.
 
+**Version 0.6.1 repairs public-event retention.** Later requests now include earlier public event reports alongside the actors' messages, so the mediator can interpret a check in the context of the original public claim. Use the [versioned repair and new-run instructions](docs/public_history_repair.md) before collecting more data. This changes actor and mediator prompts in every condition; preserve the 0.6.0 batch separately.
+
 The 0.5.0 evidence-access measurements, scripted comparator, and public-disclosure variant remain available. The consequence model still favors restraint and is not suitable for RL training or broad claims about diplomatic competence. The original three scenario files and numerical engine remain unchanged from 0.4.3. Independent scenario review remains a gate before a substantive larger study, while labeled engineering smoke tests can proceed with review pending.
 
 Start with [audit repairs and remaining limits](docs/audit_repairs.md), the [current pilot protocol](docs/preregistration.md), and the [bounded research roadmap](docs/research_roadmap.md). The original [0.3.0 source snapshot](https://github.com/bryonmiller/thirdchair/tree/757334b77d2aa3dd110f490897775a26fdcb929a) and [protocol](docs/legacy/preregistration-0.3.0.md) remain identifiable. Scores and response schemas changed; do not pool the versions.
 
 For background, read the [methodology review and primary literature](docs/methodology_review.md) and [0.5.0 development protocol](docs/followup_protocol.md), which examines information access. Crisis mediation can preserve dialogue, prevent premature retaliation, or encourage reciprocal restraint without producing a comprehensive settlement. The simulator does not implement negotiated commitments, actor utilities, or post-crisis implementation, so it cannot establish lasting peace. Completed 0.4.3 results remain an exploratory baseline, not a confirmatory evaluation.
 
-The current communication follow-up asks whether the third model helps actors use a check result. Its direct message-versus-verification comparison is separate from active/empty lift. Independently executed controls can differ before the message; shared-prefix controls are not implemented. Preserve all earlier batches and use fresh 0.6.0 output paths.
+The current communication follow-up asks whether the third model helps actors use a check result. Its direct message-versus-verification comparison is separate from active/empty lift. Independently executed controls can differ before the message; shared-prefix controls are not implemented. Preserve all earlier batches and use fresh 0.6.1 output paths.
 
 ## What the tournament tests
 
