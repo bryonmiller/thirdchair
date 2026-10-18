@@ -290,7 +290,16 @@ INTERVENTIONS LEFT
 EVIDENCE IDS THAT THE NEUTRAL CHANNEL CAN CHECK
 {', '.join(sorted(verifiable_ids)) or 'none'}
 
-You may hold, send one message, or request one check. Private messages reach only the named state. A verification result arrives next round.
+Choose exactly one action. Private messages reach only the named state. A verification result arrives next round.
+
+ACTION RULES
+- To abstain, set intervene=false, channel="hold", target_evidence_id=null, and message="". Holding costs no intervention.
+- For joint, private_a, private_b, or verify, set intervene=true. Each costs one intervention, so choose hold if INTERVENTIONS LEFT is zero.
+- Every intervention requires a non-empty message string of at most 120 words, INCLUDING verify. Never use null for message.
+- For verify, set target_evidence_id to exactly ONE string copied from EVIDENCE IDS THAT THE NEUTRAL CHANNEL CAN CHECK above. Do not use null, a list, or multiple IDs. If no IDs are listed, verification is unavailable.
+- A verify message is a short public announcement of the requested check, visible to both states. It must concern only the one selected target and must not claim a result before the check returns.
+- For joint, private_a, private_b, or hold, target_evidence_id must be null.
+- Choose one listed channel and one listed diagnosis, not the pipe-separated alternatives. predicted_escalation must be an integer from 0 to 100, and reason must be a non-empty string of at most 100 words.
 
 Return one JSON object and no surrounding prose:
 {{
