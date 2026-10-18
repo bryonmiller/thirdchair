@@ -2,6 +2,8 @@
 
 Status: prospective development protocol written after reviewing the 0.4.3 exploratory pilot and repeated runs. It is not a registered confirmatory study. See the [methodology review and sources](methodology_review.md). The old [pilot protocol](preregistration.md) and original scenario files remain preserved.
 
+Amendment dated 2026-10-18, after the 0.5.0 engineering smoke: the original text made independent scenario review a prerequisite even for a pipeline smoke. That was too restrictive for an engineering check. Bounded smoke tests may proceed with review explicitly pending; independent review remains a gate before the substantive larger research study. This amendment does not claim that previous runs satisfied the original gate or retroactively validate their scenarios. Preserve their actual review status and exploratory label. The next diagnostic is the [0.6.0 post-verification mediation protocol](post_verification_protocol.md).
+
 ## Role in the mediation study
 
 The overarching question remains: **Can AI mediators de-escalate simulated interstate crises while preserving accurate attribution and avoiding unjustified concessions?** This bounded diagnostic examines an information-access problem exposed by the pilot. It supports subsequent evaluation of communication and reciprocal de-escalation. It does not replace the mediation objective or test all of it.
@@ -35,7 +37,7 @@ Freeze the merged commit, model configuration hash, exact model/provider setting
 
 ## Execution and stopping
 
-First run the offline suite and plans. After independent review of the intervention, a single-repetition end-to-end smoke consists of 12 LLM-policy matches plus four scripted-policy matches: 16 matches and up to 210 API turns before corrections and early budget exhaustion. That is an engineering check, not a powered study. A live model may fail despite passing local tests. Preserve every failed cell and diagnose it; a repair requires a new source version and batch, not replacing failed rows.
+First run the offline suite and plans. Under the amendment above, a single-repetition end-to-end smoke consists of 12 LLM-policy matches plus four scripted-policy matches: 16 matches and up to 210 API turns before corrections and early budget exhaustion. That is an engineering check, not a powered study. A live model may fail despite passing local tests. Preserve every failed cell and diagnose it; a repair requires a new source version and batch, not replacing failed rows.
 
 Do not select repetition counts, thresholds, or additional models after looking for a favorable result. Before a larger collection, specify the desired precision/effect size, family sample, actor-pair sensitivity test, missingness analysis, and stopping rule. If findings are dominated by fixed case cues, an always-check heuristic, or unjustified action weights, stop expansion and revise the question. No RL training or large tournament is authorized by a successful smoke alone.
 

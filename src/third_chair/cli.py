@@ -7,7 +7,9 @@ import json
 from pathlib import Path
 
 from .analysis import load_records, render_markdown, summarize_records
-from .policies import LinkedVerificationPolicy, POLICY_LABEL, POLICY_NAME
+from .policies import (LinkedVerificationPolicy, POLICY_LABEL, POLICY_NAME,
+                       DelayedVerificationPolicy, DELAYED_LABEL, DELAYED_MESSAGE,
+                       DELAYED_VERIFICATION, POST_VERIFICATION_STUDY)
 from .runner import ModelSeat
 from .scenario import evidence_text, load_scenario
 from .tournament import (
@@ -80,6 +82,7 @@ def _schedule_from_args(args: argparse.Namespace):
         fixed_a=args.actor_a,
         fixed_b=args.actor_b,
         mediator_policy=args.mediator_policy,
+        mediator_label=args.mediator,
         order_seed=args.order_seed,
     )
 
@@ -94,6 +97,8 @@ def _cmd_plan(args: argparse.Namespace) -> int:
     print(f"Active mediator matches: {active}")
     print(f"Empty-chair matches: {empty}")
     print(f"Mediator policy: {args.mediator_policy}; execution-order seed: {args.order_seed}")
+    if args.mediator:
+        print(f"Selected LLM mediator: {args.mediator}")
     return 0
 
 
@@ -103,9 +108,12 @@ def _cmd_run(args: argparse.Namespace) -> int:
     if issues:
         raise ValueError("Configuration is not ready:\n" + "\n".join(issues))
     model_seats = build_model_seats(configs)
-    if args.mediator_policy == POLICY_NAME:
+    if any(row["mediator_policy"] == POLICY_NAME for row in schedule):
         model_seats[POLICY_LABEL] = ModelSeat(POLICY_LABEL, LinkedVerificationPolicy(),
                                             temperature=None, max_tokens=1, send_seed=False)
+    if any(row["mediator_policy"] == DELAYED_VERIFICATION for row in schedule):
+        model_seats[DELAYED_LABEL] = ModelSeat(DELAYED_LABEL, DelayedVerificationPolicy(),
+                                             temperature=None, max_tokens=1, send_seed=False)
     run_schedule(
         schedule=schedule,
         model_seats=model_seats,
@@ -168,7 +176,10 @@ def build_parser() -> argparse.ArgumentParser:
         sub.add_argument("--rotation", choices=["balanced", "full"], default="balanced")
         sub.add_argument("--actor-a", help="Fix State A across all mediator candidates")
         sub.add_argument("--actor-b", help="Fix State B across all mediator candidates")
-        sub.add_argument("--mediator-policy", choices=["llm", POLICY_NAME], default="llm")
+        sub.add_argument("--mediator", help="Select one configured LLM mediator with fixed actors")
+        sub.add_argument("--mediator-policy", choices=["llm", POLICY_NAME, DELAYED_MESSAGE,
+                                                     DELAYED_VERIFICATION, POST_VERIFICATION_STUDY],
+                         default="llm")
         sub.add_argument("--order-seed", type=int,
                          help="Shuffle paired blocks and condition order reproducibly")
         sub.add_argument("--modes", default="active,empty")

@@ -29,6 +29,7 @@ REQUIRED_DOCS = {
     "threat_model.md",
     "methodology_review.md",
     "followup_protocol.md",
+    "post_verification_protocol.md",
 }
 PUBLIC_TEXT = [
     ROOT / "README.md",
