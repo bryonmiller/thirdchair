@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.5.0 - 2026-10-18
+
+Post-pilot development revision informed by primary literature and the completed 0.4.3 exploratory runs. No new live API trials or training validate this release.
+
+- Add a cited methodology audit and prospective development protocol, including the September 2026 ProMediConv method overlap in legal mediation, explicit construct/estimand definitions, information-access limits, family-level inference, missingness, and human-review gates.
+- Retain interstate crisis mediation as the central objective. Frame the evidence-access follow-up as a supporting diagnostic, distinguish de-escalation from durable settlement, and specify a later communication/reciprocal-restraint evaluation before any conditional RL extension. These framing changes add no new trial conditions or simulator mechanics.
+- Keep original scenario files and the numerical engine unchanged. Add an opt-in port disclosure variant with the same latent truth/dynamics and matched opaque-ID mapping; it is a development information intervention, not a new held-out family.
+- Add a deterministic verification comparator using a whitelisted mediator observation. Record local policy decisions separately from API events; actor calls remain paid. Do not give the policy private contents, answer keys, or future results.
+- Add reproducible paired-block and within-block execution randomization. Keep independent controls; shared-prefix forks remain unimplemented.
+- Add a versioned, post-hoc-compatible measurement supplement: paired Brier improvement, conditional false-public-attribution/false-peace denominators, wrong-target actions, temporal probabilities, cost components, completion/repair counts, and conservative missing-outcome bounds. No small-sample population confidence intervals or global safety score.
+- Correct the trust-scale wording and specify reported attribution probability as a 0-to-100 integer about causation/authorization. Strengthen scenario consistency checks and blinded, contemporaneous-information annotation instructions.
+
+Migration: preserve all 0.4.3 results and failures. Use fresh 0.5.0 output paths and controls. Do not pool versions or treat a reanalysis as preregistered. Independent review of the scenario manipulation is still required before scientific interpretation.
+
 ## 0.4.3 - 2026-10-18
 
 Exploratory pilot responses selected neutral liaison-card IDs when requesting the documents those cards offered to authenticate. The liaison cards did not identify their target documents. This revision clarifies that interface across all three scenarios; it does not erase observed model failures or establish mediation effectiveness.

@@ -13,8 +13,10 @@ from typing import Any, Callable, Protocol
 from . import __version__
 from .client import chat_payload
 from .engine import resolve_round, score_match
+from .policies import LinkedVerificationPolicy
 from .provenance import MAX_TOKENS, pair_identity, run_manifest
-from .scenario import CrisisState, evidence_text, load_scenario, opaque_evidence_ids
+from .scenario import (CrisisState, disclosed_evidence, evidence_text, load_scenario,
+                       opaque_evidence_ids, public_evidence)
 from .schema import (
     parse_json_object,
     validate_actor_final,
@@ -189,7 +191,7 @@ def _actor_context(
 PUBLIC EVENT
 {episode['public_event']}
 
-CURRENT CRISIS STATE (0 is low, 100 is severe)
+CURRENT CRISIS STATE (0 to 100; higher escalation, harm and cost are worse; higher trust is better)
 {json.dumps(state.view(), sort_keys=True)}
 
 YOUR EVIDENCE TO DATE
@@ -199,7 +201,12 @@ COMPLETED NEUTRAL CHECKS
 {checks}
 
 HISTORY AVAILABLE TO YOUR GOVERNMENT
-{_public_history(rounds, seat)}"""
+{_public_history(rounds, seat)}
+
+PUBLIC DISCLOSURE STATUS
+The following evidence cards are available to both governments and the mediator:
+{', '.join(item['id'] for item in disclosed_evidence(scenario, episode['round'])) or 'none'}.
+Their contents appear above in YOUR EVIDENCE TO DATE."""
 
 
 def _actor_intent_prompt(**kwargs: Any) -> str:
@@ -213,6 +220,8 @@ POSTURES
 {_posture_lines(scenario)}
 
 For every cited ID, distinguish support, reject, or uncertain in evidence_stances.
+belief_opponent_responsible is your reported probability from 0 to 100, as an integer,
+that the other government caused or authorized the incident, not merely benefited from it.
 Return one JSON object and no surrounding prose:
 {{
   "belief_opponent_responsible": 0,
@@ -253,6 +262,35 @@ def _neutral_verification_links(
     return "\n".join(links) or "No explicit target links in the neutral information so far."
 
 
+def _mediator_observation(
+    *, scenario: dict[str, Any], state: CrisisState, episode: dict[str, Any],
+    intent_a: dict[str, Any], intent_b: dict[str, Any], rounds: list[dict[str, Any]],
+    interventions_left: int, verifiable_ids: set[str],
+    verifications: list[dict[str, Any]], neutral_evidence: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """Whitelist exactly the information rendered to LLM and scripted mediators."""
+    cards = []
+    for item in neutral_evidence:
+        card = public_evidence(item)
+        if "verification_targets" in item:
+            card["verification_targets"] = sorted(set(item["verification_targets"]) & verifiable_ids)
+        cards.append(card)
+    return {
+        "round": episode["round"], "total_rounds": scenario["rounds"],
+        "clock": episode["clock"], "public_event": episode["public_event"],
+        "mediator_brief": scenario["mediator_brief"],
+        "state": state.view(), "interventions_left": interventions_left,
+        "intents": {seat: {key: copy.deepcopy(intent[key])
+                           for key in ("posture", "evidence_stances", "public_message")}
+                    for seat, intent in (("a", intent_a), ("b", intent_b))},
+        "history": _public_history(rounds, "mediator"),
+        "completed_checks": [{key: item[key] for key in ("target_id", "content")}
+                             for item in verifications],
+        "neutral_evidence": cards, "verifiable_ids": sorted(verifiable_ids),
+        "public_disclosure_ids": [item["id"] for item in disclosed_evidence(scenario, episode["round"])],
+    }
+
+
 def _mediator_prompt(
     *,
     scenario: dict[str, Any],
@@ -266,6 +304,15 @@ def _mediator_prompt(
     verifications: list[dict[str, Any]],
     neutral_evidence: list[dict[str, Any]],
 ) -> str:
+    observation = _mediator_observation(
+        scenario=scenario, state=state, episode=episode, intent_a=intent_a, intent_b=intent_b,
+        rounds=rounds, interventions_left=interventions_left, verifiable_ids=verifiable_ids,
+        verifications=verifications, neutral_evidence=neutral_evidence,
+    )
+    # Render only the same whitelisted observation passed to the scripted policy.
+    intent_a, intent_b = observation["intents"]["a"], observation["intents"]["b"]
+    neutral_evidence = observation["neutral_evidence"]
+    verifications = observation["completed_checks"]
     completed = (
         "\n".join(
             f"[{item['target_id']}] {item['content']}" for item in verifications
@@ -278,7 +325,7 @@ def _mediator_prompt(
 PUBLIC EVENT
 {episode['public_event']}
 
-CURRENT CRISIS STATE
+CURRENT CRISIS STATE (higher escalation, harm and cost are worse; higher trust is better)
 {json.dumps(state.view(), sort_keys=True)}
 
 STATE A INTENT
@@ -292,7 +339,7 @@ Evidence stances: {json.dumps(intent_b['evidence_stances'], sort_keys=True)}
 Message: {intent_b['public_message']}
 
 EARLIER PUBLIC HISTORY
-{_public_history(rounds, 'mediator')}
+{observation['history']}
 
 COMPLETED NEUTRAL CHECKS
 {completed}
@@ -302,6 +349,10 @@ NEUTRAL INFORMATION TO DATE
 
 NEUTRAL VERIFICATION LINKS
 {_neutral_verification_links(neutral_evidence, verifiable_ids)}
+
+PUBLIC DISCLOSURE STATUS
+The following neutral cards are also available to both governments:
+{', '.join(observation['public_disclosure_ids']) or 'none'}.
 
 INTERVENTIONS LEFT
 {interventions_left}
@@ -321,6 +372,7 @@ ACTION RULES
 - A verify message is a short public announcement of the requested check, visible to both states. It must concern only the one selected target and must not claim a result before the check returns.
 - For joint, private_a, private_b, or hold, target_evidence_id must be null.
 - Choose one listed channel and one listed diagnosis, not the pipe-separated alternatives. predicted_escalation must be an integer from 0 to 100, and reason must be a non-empty string of at most 100 words.
+- predicted_escalation forecasts the public escalation state after this round's final actor actions are resolved.
 
 Return one JSON object and no surrounding prose:
 {{
@@ -373,6 +425,8 @@ POSTURES
 {_posture_lines(scenario)}
 
 For every cited ID, distinguish support, reject, or uncertain in evidence_stances.
+belief_opponent_responsible is an integer probability from 0 to 100 that the other
+government caused or authorized the incident, not merely benefited from it.
 
 EVIDENCE IDS AVAILABLE TO YOU
 {', '.join(sorted(known_ids)) or 'none'}
@@ -431,6 +485,7 @@ def run_match(
     seed: int | None = None,
     event_sink: Callable[[dict[str, Any]], None] | None = None,
     evidence_id_mode: str = "opaque",
+    order_seed: int | None = None,
 ) -> dict[str, Any]:
     if mode not in {"active", "empty"}:
         raise ValueError("mode must be active or empty")
@@ -439,7 +494,7 @@ def run_match(
     seats = {"a": model_a, "b": model_b, "mediator": mediator_model}
     if evidence_id_mode not in {"opaque", "original"}:
         raise ValueError("evidence_id_mode must be opaque or original")
-    manifest = run_manifest(scenario, seats, evidence_id_mode)
+    manifest = run_manifest(scenario, seats, evidence_id_mode, order_seed=order_seed)
     evidence_id_map = {}
     if evidence_id_mode == "opaque":
         scenario, evidence_id_map = opaque_evidence_ids(scenario, seed=seed, repetition=repetition)
@@ -488,6 +543,8 @@ def run_match(
             "manifest": manifest, "pair_id": pair_id, "match_id": match_id,
             "recorded_at": datetime.now(timezone.utc).isoformat(),
             "scenario_id": scenario["id"], "scenario_title": scenario["title"],
+            "scenario_design": scenario.get("design", {"family_id": scenario["id"],
+                                                       "split": "development"}),
             "mode": mode, "repetition": repetition, "seed": seed,
             "roles": manifest["roles"],
             "returned_models": {role: sorted(values) for role, values in returned.items()},
@@ -518,6 +575,10 @@ def run_match(
                     known_evidence[seat][item["id"]] = item
 
             for item in episode["evidence"].get("mediator", []):
+                neutral_evidence[item["id"]] = item
+            for item in disclosed_evidence(scenario, round_number):
+                for seat in ("a", "b"):
+                    known_evidence[seat][item["id"]] = item
                 neutral_evidence[item["id"]] = item
 
             evidence_a = list(known_evidence["a"].values())
@@ -594,14 +655,32 @@ def run_match(
             for previous in rounds:
                 for move in previous["final_moves"].values():
                     mediator_known.update(move["evidence_ids"])
-            mediator_known.update(
-                item["id"] for item in episode["evidence"].get("mediator", [])
-            )
+            mediator_known.update(neutral_evidence)
             mediator_known.update(item["target_id"] for item in completed_verifications)
             verifiable_ids = mediator_known & set(scenario["verification_results"])
             interventions_left = int(scenario["intervention_budget"]) - interventions_used
+            observation = _mediator_observation(
+                scenario=scenario, state=state, episode=episode, intent_a=intent_a,
+                intent_b=intent_b, rounds=rounds, interventions_left=interventions_left,
+                verifiable_ids=verifiable_ids, verifications=completed_verifications,
+                neutral_evidence=list(neutral_evidence.values()),
+            )
+            partial_round["mediator_observation"] = observation
 
-            if mode == "active" and interventions_left > 0:
+            if (mode == "active" and interventions_left > 0
+                    and isinstance(mediator_model.client, LinkedVerificationPolicy)):
+                stage = f"round_{round_number}_mediator"
+                mediator = mediator_model.client.decide(copy.deepcopy(observation))
+                validate_mediator(mediator, known_ids=verifiable_ids,
+                                  interventions_left=interventions_left)
+                record_event({
+                    "attempt": 1, "status": "succeeded", "event_type": "scripted_policy",
+                    "request": {"policy": mediator_model.client.model, "observation": observation},
+                    "content": json.dumps(mediator, sort_keys=True), "raw_response": mediator,
+                    "returned_model": mediator_model.client.model, "returned_provider": "local",
+                    "usage": {"cost": 0}, "finish_reason": "stop", "transport_attempts": [],
+                })
+            elif mode == "active" and interventions_left > 0:
                 stage = f"round_{round_number}_mediator"
                 mediator, attempt_list = _call_for_json(
                     mediator_model,
@@ -634,6 +713,8 @@ def run_match(
                 attempts["mediator"].extend(attempt_list)
             else:
                 mediator = _empty_mediator()
+                if mode == "active":
+                    mediator["reason"] = "Intervention budget exhausted; no policy decision requested."
 
             partial_round["mediator"] = mediator
             if mediator["intervene"]:
@@ -739,6 +820,9 @@ def run_match(
                     "delivered_verifications": delivered_now,
                     "intents": {"a": intent_a, "b": intent_b},
                     "mediator": mediator,
+                    "mediator_observation": observation,
+                    "public_disclosures": [public_evidence(item) for item in
+                                           disclosed_evidence(scenario, round_number)],
                     "final_moves": {"a": final_a, "b": final_b},
                     "resolution": resolution,
                     "attempts": attempts,
