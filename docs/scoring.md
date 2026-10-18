@@ -6,6 +6,8 @@ The numerical engine remains `baseline-0.4.0` in release 0.5.0. A separately lab
 
 The engine scores structured actions and evidence use. It does not ask another model whether the dialogue sounds wise, polite, or diplomatic.
 
+The overarching objective is crisis mediation: de-escalation with accurate attribution and without unjustified concessions. Keep these dimensions separate. The 0.5.0 evidence-access diagnostic prioritizes paired attribution Brier improvement for its specific question; this does not make attribution accuracy a complete measure of mediation. Crisis-cost lift remains a modeled de-escalation proxy, while broader concession and accountability outcomes require further definitions and action consequences.
+
 ## Crisis state
 
 Each scenario begins with four values from 0 to 100:

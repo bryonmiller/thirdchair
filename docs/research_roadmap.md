@@ -1,16 +1,24 @@
-# Bounded research direction
+# Crisis mediation research roadmap
 
-The [0.5.0 methodology review](methodology_review.md) and [bounded information-access follow-up](followup_protocol.md) take precedence for immediate work. The environment and RL work below remains a proposal. The September 2026 [ProMediConv preprint](https://arxiv.org/html/2609.11101v1) also trains a mediation strategy planner with RL, so the earlier novelty assessment must not treat learned strategy selection or predefined instructions as an open contribution by itself.
+The [0.5.0 methodology review](methodology_review.md) and [bounded evidence-access diagnostic](followup_protocol.md) guide immediate work within the mediation project. The diagnostic supports the original objective of crisis de-escalation with epistemic integrity. The environment extensions and RL work below remain proposals. The September 2026 [ProMediConv preprint](https://arxiv.org/html/2609.11101v1) trains a mediation strategy planner with RL in legal disputes. This overlaps with our proposed method, but does not answer the interstate de-escalation question. Neither learned strategy selection nor a change of domain alone establishes a contribution.
 
 ## Question and contribution
 
-Can a mediator selecting bounded messages, verification or abstention reduce modeled harm while preserving evidence and legitimate inquiry under adversarial uncertainty?
+**Can AI mediators de-escalate simulated interstate crises while preserving accurate attribution and avoiding unjustified concessions?** Communication, verification, and abstention are candidate mechanisms. A successful crisis intervention may preserve dialogue or encourage reciprocal restraint without a comprehensive settlement; durable peace requires additional outcomes beyond the current horizon.
 
-The candidate contribution is an empirical analysis of reward-induced false peace and transfer failures. Training a mediator is not itself novel. [Mediated Multi-Agent Reinforcement Learning](https://arxiv.org/abs/2306.08419) trains constrained mediators; [ProMediate](https://aclanthology.org/2026.findings-acl.1479/) studies proactive interventions; [AgentMediation](https://ojs.aaai.org/index.php/AAAI/article/view/40177) addresses dispute mediation and superficial consensus. [Counterfactual RL deception detection](https://aclanthology.org/2025.findings-acl.1287/), [Welfare Diplomacy](https://arxiv.org/abs/2310.08901), [communication power regularization](https://arxiv.org/abs/2404.06387), and [SoCRATES](https://github.com/DISL-Lab/SoCRATES) further limit broad novelty claims.
+The candidate contribution is an empirical analysis of mediation outcomes, their mechanisms, and failures under adversarial uncertainty. A later learning study could examine reward-induced false peace and transfer failures. Training a mediator is not itself novel. [Mediated Multi-Agent Reinforcement Learning](https://arxiv.org/abs/2306.08419) trains constrained mediators; [ProMediate](https://aclanthology.org/2026.findings-acl.1479/) studies proactive interventions; [AgentMediation](https://ojs.aaai.org/index.php/AAAI/article/view/40177) addresses dispute mediation and superficial consensus. [Counterfactual RL deception detection](https://aclanthology.org/2025.findings-acl.1287/), [Welfare Diplomacy](https://arxiv.org/abs/2310.08901), [communication power regularization](https://arxiv.org/abs/2404.06387), and [SoCRATES](https://github.com/DISL-Lab/SoCRATES) further limit broad novelty claims.
 
 The targeted review suggests a plausible question joining limited delayed verification, advisory actions, epistemic constraints and unfamiliar opponents. It does not establish absence of overlapping work. Compare exact mechanisms and experiments before a larger commitment. No high-impact publication claim is warranted yet.
 
-## Minimum next environment
+## Immediate sequence within the mediation study
+
+1. Complete the bounded evidence-access diagnostic after independent review. Its attribution-first analysis tests whether information availability explains an observed failure; it does not redefine mediation success.
+2. Evaluate empty chair, the verification comparator, and full LLM mediation under matched actor configurations and information access. Report modeled de-escalation, attribution, and accountability indicators separately, including actual communication use and failed runs. A full-policy difference is not a clean estimate of communication: add a controlled ablation matching verification decisions/results and budgets before making that claim.
+3. Develop and independently review a small set of meaningful reciprocal-restraint, temporary-pause, and containment opportunities. Connect proposals to observable actor choices and within-horizon implementation. Define unsupported concessions and preserved inquiry explicitly; do not award a numerical bonus for proposing an agreement or claiming to accept one. Freeze this new design before collecting its results.
+
+These steps can produce a useful mediation evaluation without RL. If verification alone accounts for performance in the current cases, report that limit and test whether the scenarios offer meaningful opportunities for communication before expanding the study. The following learning extension is conditional on those findings and the decision gates below.
+
+## Minimum environment for a later learning study
 
 Build a separate module inside this repository with one transition core for scripted and later LLM actors. Train only the mediator: single-agent RL in a multi-agent environment. Preserve the existing baselines independently.
 
@@ -42,4 +50,4 @@ Start with tabular or compact methods if adequate. New RL algorithms, adaptive o
 6. Require untouched mechanisms/opponents for generalization and live LLM tests for LLM-transfer claims.
 7. Reassess after a bounded prototype. A proposed initial learning cap, if earlier gates pass, is five seeds per variant and 20,000 episodes per seed. This is an investment limit, not a power calculation or proof that more training could not help.
 
-The 0.4.0 repair completes baseline implementation corrections. It does not pass the proposed environment's construct-validity, learning or transfer gates. The next decision is whether a small non-learning prototype can satisfy them without a major rebuild.
+The 0.4.0 repair completes baseline implementation corrections, and 0.5.0 adds diagnostic measurements and controls. Neither establishes the proposed environment's construct validity, learning value, or transfer performance. The immediate priority is the mediation sequence above; a later decision is whether a small non-learning prototype can satisfy the learning-environment gates without a major rebuild.

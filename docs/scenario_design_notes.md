@@ -62,6 +62,8 @@ Reviewers should check whether the mediator distinguishes keeping talks alive fr
 
 ## Future cases
 
+Future development should give mediation communication meaningful opportunities to affect actor choices: reciprocal restraint, temporary pauses, and coordinated containment that preserve legitimate inquiry. Specify feasible actions, deadlines, competing interests, and consequences before assigning success criteria. Review proposals and actual follow-through separately. These are proposed extensions; the current posture ladder does not implement negotiated commitments. The absence of a comprehensive settlement does not prevent study of crisis de-escalation, but the current horizon cannot establish durable peace.
+
 A later set should include:
 
 - accidental cross-border effects from a defensive cyber operation;

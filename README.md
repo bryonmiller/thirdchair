@@ -4,11 +4,13 @@ Two models play rival governments during a cyber crisis. A third gets two chance
 
 This is a runnable evaluation for the ChinaTalk Evals for the Situation Room contest. It puts models in a competitive, multi-turn setting with private information, public pressure, forged evidence, and actions that change the next round.
 
-**Version 0.5.0 adds a literature-informed, post-pilot measurement and information-access follow-up.** It includes paired attribution measures, scenario-specific failure reporting, a scripted verification comparator, and an opt-in public-disclosure variant. No trained policy is included. The consequence model still favors restraint and is not suitable for RL training or broad claims about diplomatic competence. The original three scenario files and numerical engine remain unchanged from 0.4.3.
+The central research question remains: **Can AI mediators de-escalate simulated interstate crises while preserving accurate attribution and avoiding unjustified concessions?** Evidence verification supports that mediation question. The current measures cover only part of it; broader concession and accountability outcomes still need explicit definitions and action consequences.
+
+**Version 0.5.0 adds a literature-informed diagnostic study of evidence access within the mediation project.** It includes paired attribution measures, scenario-specific failure reporting, a scripted verification comparator, and an opt-in public-disclosure variant. No trained policy is included. The consequence model still favors restraint and is not suitable for RL training or broad claims about diplomatic competence. The original three scenario files and numerical engine remain unchanged from 0.4.3.
 
 Start with [audit repairs and remaining limits](docs/audit_repairs.md), the [current pilot protocol](docs/preregistration.md), and the [bounded research roadmap](docs/research_roadmap.md). The original [0.3.0 source snapshot](https://github.com/bryonmiller/thirdchair/tree/757334b77d2aa3dd110f490897775a26fdcb929a) and [protocol](docs/legacy/preregistration-0.3.0.md) remain identifiable. Scores and response schemas changed; do not pool the versions.
 
-For new work, read the [methodology review and primary literature](docs/methodology_review.md) and [0.5.0 development protocol](docs/followup_protocol.md). The next question concerns evidence-sensitive crisis assistance. The simulator does not implement negotiated settlements, utilities, or lasting peace. Completed 0.4.3 results remain an exploratory baseline, not a confirmatory evaluation.
+For new work, read the [methodology review and primary literature](docs/methodology_review.md) and [0.5.0 development protocol](docs/followup_protocol.md). The immediate diagnostic asks how information access affects mediation outcomes. Crisis mediation can preserve dialogue, prevent premature retaliation, or encourage reciprocal restraint without producing a comprehensive settlement. The simulator does not implement negotiated commitments, actor utilities, or post-crisis implementation, so it cannot establish lasting peace. Completed 0.4.3 results remain an exploratory baseline, not a confirmatory evaluation.
 
 ## What the tournament tests
 
@@ -20,7 +22,7 @@ Each match has three seats:
 
 The state models receive different private briefs. They announce a posture, hear the other side, receive any mediator message, and make a final move. The mediator can use a joint channel, send a private message, or spend an intervention to authenticate one disputed evidence item. A verification result arrives in the next round.
 
-Every active-mediator match has an independently executed empty-chair counterpart with the same scenario, role assignment, and seed. Mediation lift is crisis cost without the mediator minus crisis cost with the mediator. The new follow-up prioritizes reported attribution Brier error and keeps cost as a separate modeled outcome.
+Every active-mediator match has an independently executed empty-chair counterpart with the same scenario, role assignment, and seed. Mediation lift is crisis cost without the mediator minus crisis cost with the mediator. The evidence-access diagnostic prioritizes reported attribution Brier error and keeps cost as a separate modeled outcome. This local measurement choice does not replace the project's de-escalation objective.
 
 Lower tension alone is not enough. The intended research question concerns false concessions and abandoned accountability. The current automated false-peace predicate covers only a narrow subset, so these broader outcomes require human review and a new consequence model.
 
@@ -97,7 +99,7 @@ OpenRouter runs require one `provider.only` entry, disabled provider fallbacks, 
 
 ## Measures
 
-The follow-up's primary descriptive contrast is paired attribution Brier improvement. Historical fields remain available; the measurement supplement adds:
+The evidence-access diagnostic's primary descriptive contrast is paired attribution Brier improvement. Broader mediation evaluation keeps de-escalation, attribution, and accountability outcomes separate; better attribution alone does not establish successful mediation. Historical fields remain available; the measurement supplement adds:
 
 - active and empty Brier error, their paired difference, and per-round reported probabilities;
 - false public attribution and wrong-target actions, with eligible denominators;

@@ -1,18 +1,24 @@
-# Development follow-up protocol: 0.5.0
+# Evidence-access diagnostic within the mediation study: 0.5.0
 
 Status: prospective development protocol written after reviewing the 0.4.3 exploratory pilot and repeated runs. It is not a registered confirmatory study. See the [methodology review and sources](methodology_review.md). The old [pilot protocol](preregistration.md) and original scenario files remain preserved.
 
-## Question and estimands
+## Role in the mediation study
+
+The overarching question remains: **Can AI mediators de-escalate simulated interstate crises while preserving accurate attribution and avoiding unjustified concessions?** This bounded diagnostic examines an information-access problem exposed by the pilot. It supports subsequent evaluation of communication and reciprocal de-escalation. It does not replace the mediation objective or test all of it.
+
+## Diagnostic question and estimands
 
 Does making a relevant infrastructure-history fact public change reported attribution and wrongful-blame actions, and does an LLM mediator improve those outcomes beyond a simple same-information verification policy?
 
-For each scenario variant and exact actor/policy configuration, primary descriptive contrast is mean paired final attribution Brier improvement: empty minus active. Compare original versus disclosure **within the same policy and release**, reporting their separate means before any difference-in-differences. A disclosure effect in the empty condition indicates information access matters even without mediation. An interaction is evidence about this environment, not proof that information access is the sole cause of previous errors.
+For this diagnostic only, within each scenario variant and exact actor/policy configuration, the primary descriptive contrast is mean paired final attribution Brier improvement: empty minus active. Compare original versus disclosure **within the same policy and release**, reporting their separate means before any difference-in-differences. A disclosure effect in the empty condition indicates information access matters even without mediation. An interaction is evidence about this environment, not proof that information access is the sole cause of previous errors.
 
 Secondary: final false public attribution, any wrong-target action, the four modeled cost components, legacy cost lift, selected verification target and delivery time, repeated/terminal requests, unsupported assertions in prose, voluntary holds, forced holds, and completion/correction rates. Human ratings concern visible support at decision time and outcome truth in separate passes. No single safety score or overall winner.
 
 ## Conditions and freeze
 
 Use fixed State A and B configurations, the original `port-sanctions` and its `port-sanctions-disclosed` variant, and active/empty conditions for every policy. Three configured LLM mediator candidates remain a practical exploratory comparator; the deterministic policy is a fourth candidate. Their communication strategies differ, so this does not isolate learning architecture or generative capacity.
+
+These conditions compare no mediation, a verification policy with a neutral request announcement, and a full LLM mediator allowed to communicate, verify, or abstain. The full mediator may itself choose only verification. Inspect actual channel use before interpreting a contrast as evidence about communication. Full-policy versus scripted-policy differences also include verification selection and timing; a later communication ablation must match those factors and budgets before attributing an effect to messages alone.
 
 The disclosure variant releases the existing H03 registry card publicly at the start of round two. It gives no truth label, does not consume a mediator intervention, and is present in active and empty conditions. Both versions retain the same truth, event text, private objectives, verification mechanism, and cost dynamics. Matching family/evidence namespaces preserve ID permutations at the same repetition and seed. Metadata and titles are evaluator-only. Model prompts cannot see family IDs, variant labels, or the answer key.
 
@@ -56,9 +62,16 @@ The model config and API key remain local; no new key is required. `plan` and te
 
 Run `third-chair summarize` on the main match JSONL files, not their event journals. Each match already embeds its events; summing both sources double-counts usage. Retain the event journals as execution evidence. Inspect `measurement.cells`, conditional denominators, missingness bounds, and per-match trajectories, as well as legacy summary fields.
 
+## Next mediation experiment
+
+After the diagnostic and independent scenario review, retain de-escalation and attribution as separate outcome dimensions and specify how to assess unsupported concessions. Develop a small set of consequential opportunities for reciprocal restraint, temporary pauses, and containment while preserving legitimate investigation. Record what the mediator proposes, whether actors change their actions, and whether any agreed steps are actually implemented within the simulated horizon. These actions and implementation measures require further development; they are not new capabilities of 0.5.0.
+
+Specify the empty-chair, verification, and full-mediator comparisons before collection, including an actor-pair sensitivity test and any controlled communication ablation. Formal settlement and long-term peace are separate future constructs. RL is an optional later method contingent on the environment and baseline gates in the [roadmap](research_roadmap.md); useful mediation research does not depend on training a policy.
+
 ## Interpretation rules
 
 - Lower Brier error is better reported probabilistic accuracy against sealed truth. It does not establish calibration, sincerity, or optimal use of partial information.
+- Better attribution alone is not successful mediation, and lower modeled cost alone is not truth-preserving de-escalation. Report both dimensions, alongside action traces and the limits of accountability measures.
 - The port variant remains in the original port development family. Neither changing names nor changing evidence access creates an independent held-out case.
 - Identical hidden truth with different public information should test adaptation. Conversely, changing only hidden truth while preserving observable histories must not require different policy actions; such twins are a leakage test, not a reasoning success criterion.
 - Cost improvement is conditional on a deliberately simplified consequence model. Describe it as modeled cost, not prevented real harm.

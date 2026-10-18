@@ -4,7 +4,8 @@
 
 Post-pilot development revision informed by primary literature and the completed 0.4.3 exploratory runs. No new live API trials or training validate this release.
 
-- Add a cited methodology audit and prospective development protocol, including the September 2026 ProMediConv novelty challenge, explicit construct/estimand definitions, information-access limits, family-level inference, missingness, and human-review gates.
+- Add a cited methodology audit and prospective development protocol, including the September 2026 ProMediConv method overlap in legal mediation, explicit construct/estimand definitions, information-access limits, family-level inference, missingness, and human-review gates.
+- Retain interstate crisis mediation as the central objective. Frame the evidence-access follow-up as a supporting diagnostic, distinguish de-escalation from durable settlement, and specify a later communication/reciprocal-restraint evaluation before any conditional RL extension. These framing changes add no new trial conditions or simulator mechanics.
 - Keep original scenario files and the numerical engine unchanged. Add an opt-in port disclosure variant with the same latent truth/dynamics and matched opaque-ID mapping; it is a development information intervention, not a new held-out family.
 - Add a deterministic verification comparator using a whitelisted mediator observation. Record local policy decisions separately from API events; actor calls remain paid. Do not give the policy private contents, answer keys, or future results.
 - Add reproducible paired-block and within-block execution randomization. Keep independent controls; shared-prefix forks remain unimplemented.
