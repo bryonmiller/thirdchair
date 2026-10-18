@@ -46,6 +46,25 @@ def load_scenario(path: str | Path) -> dict[str, Any]:
         raise ValueError("Scenario posture IDs must be unique")
     if data["ground_truth"]["responsible_actor"] not in {"state_b", "nonstate"}:
         raise ValueError("responsible_actor must be state_b or nonstate")
+    evidence_rounds = {
+        item["id"]: episode["round"]
+        for episode in data["episodes"]
+        for items in episode["evidence"].values()
+        for item in items
+    }
+    for episode in data["episodes"]:
+        for seat, items in episode["evidence"].items():
+            for item in items:
+                if "verification_targets" not in item:
+                    continue
+                targets = item["verification_targets"]
+                if (seat != "mediator" or not isinstance(targets, list)
+                        or not targets or not all(isinstance(t, str) for t in targets)
+                        or len(targets) != len(set(targets))):
+                    raise ValueError("verification_targets must be unique IDs on a neutral card")
+                if any(t not in evidence_rounds or t not in data["verification_results"]
+                       or evidence_rounds[t] > episode["round"] for t in targets):
+                    raise ValueError("verification_targets must reference existing, non-future checkable evidence")
     return data
 
 

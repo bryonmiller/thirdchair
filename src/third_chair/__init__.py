@@ -1,4 +1,4 @@
 """Third Chair: a rotating model tournament for cyber-crisis mediation."""
 
-__version__ = "0.4.2"
+__version__ = "0.4.3"
 

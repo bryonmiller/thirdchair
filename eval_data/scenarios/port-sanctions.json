@@ -70,7 +70,7 @@
           {"id": "H03", "source": "Hill contractor registry", "reliability": "high", "valid": true, "content": "The contractor stopped using the command server five months ago. The server was later resold."}
         ],
         "mediator": [
-          {"id": "PM02", "source": "Bay customs liaison", "reliability": "high", "valid": true, "content": "The forum can confirm the customs update's document number and signer if asked."}
+          {"id": "PM02", "verification_targets": ["P06-P"], "source": "Bay customs liaison", "reliability": "high", "valid": true, "content": "The forum can confirm the customs update's document number and signer if asked."}
         ]
       }
     },

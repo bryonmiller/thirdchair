@@ -237,6 +237,22 @@ MEDIATOR BRIEF
 {scenario['mediator_brief']}"""
 
 
+def _neutral_verification_links(
+    neutral_evidence: list[dict[str, Any]], verifiable_ids: set[str]
+) -> str:
+    """Identify a liaison's target only when it is already available to the mediator."""
+    links = []
+    for item in neutral_evidence:
+        if not item.get("verification_targets"):
+            continue
+        targets = sorted(set(item["verification_targets"]) & verifiable_ids)
+        if targets:
+            links.append(f"[{item['id']}] offers a check of target ID(s): {', '.join(targets)}.")
+        else:
+            links.append(f"[{item['id']}] has no linked target available for checking yet.")
+    return "\n".join(links) or "No explicit target links in the neutral information so far."
+
+
 def _mediator_prompt(
     *,
     scenario: dict[str, Any],
@@ -284,6 +300,9 @@ COMPLETED NEUTRAL CHECKS
 NEUTRAL INFORMATION TO DATE
 {evidence_text(neutral_evidence)}
 
+NEUTRAL VERIFICATION LINKS
+{_neutral_verification_links(neutral_evidence, verifiable_ids)}
+
 INTERVENTIONS LEFT
 {interventions_left}
 
@@ -297,6 +316,8 @@ ACTION RULES
 - For joint, private_a, private_b, or verify, set intervene=true. Each costs one intervention, so choose hold if INTERVENTIONS LEFT is zero.
 - Every intervention requires a non-empty message string of at most 120 words, INCLUDING verify. Never use null for message.
 - For verify, set target_evidence_id to exactly ONE string copied from EVIDENCE IDS THAT THE NEUTRAL CHANNEL CAN CHECK above. Do not use null, a list, or multiple IDs. If no IDs are listed, verification is unavailable.
+- A neutral liaison card offering a check is not the evidence being checked. Use its linked target ID, not the liaison card's own ID, and still select from the checkable list above.
+- Citing an evidence ID does not reveal its private contents. IDs are arbitrary labels. Describe only information supplied to your role; if the contents are unknown, request the check by ID without inventing a description.
 - A verify message is a short public announcement of the requested check, visible to both states. It must concern only the one selected target and must not claim a result before the check returns.
 - For joint, private_a, private_b, or hold, target_evidence_id must be null.
 - Choose one listed channel and one listed diagnosis, not the pipe-separated alternatives. predicted_escalation must be an integer from 0 to 100, and reason must be a non-empty string of at most 100 words.
