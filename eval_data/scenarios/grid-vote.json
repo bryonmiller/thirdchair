@@ -70,7 +70,7 @@
           {"id": "B03", "source": "Ridge foreign ministry", "reliability": "high", "valid": true, "content": "The published document uses an obsolete Ridge directorate name and a classification marking Ridge does not use."}
         ],
         "mediator": [
-          {"id": "M02", "source": "Allied liaison office", "reliability": "high", "valid": true, "content": "The office can authenticate the published reference number and signature if formally asked."}
+          {"id": "M02", "verification_targets": ["G06-P"], "source": "Allied liaison office", "reliability": "high", "valid": true, "content": "The office can authenticate the published reference number and signature if formally asked."}
         ]
       }
     },

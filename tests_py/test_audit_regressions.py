@@ -15,9 +15,9 @@ from third_chair.analysis import render_markdown, summarize_records
 from third_chair.client import ModelResponse, OpenAICompatibleClient
 from third_chair.engine import resolve_round
 from third_chair.provenance import run_manifest, seat_config
-from third_chair.runner import ModelSeat, _validate_visible_final, run_match
+from third_chair.runner import ModelSeat, _neutral_verification_links, _validate_visible_final, run_match
 from third_chair.scenario import CrisisState, load_scenario, opaque_evidence_ids
-from third_chair.schema import validate_actor_final
+from third_chair.schema import validate_actor_final, validate_mediator
 from third_chair.tournament import build_schedule, run_schedule
 from test_third_chair import actor_final, actor_intent
 
@@ -78,6 +78,56 @@ def fixture_pair(active_false=False, empty_false=False):
 
 
 class ContextTests(unittest.TestCase):
+    def test_neutral_links_identify_checkable_targets_without_exposing_evidence(self):
+        for path in sorted((ROOT / "eval_data/scenarios").glob("*.json")):
+            with self.subTest(scenario=path.stem):
+                scenario, mapping = opaque_evidence_ids(load_scenario(path), seed=5100, repetition=1)
+                card = scenario["episodes"][1]["evidence"]["mediator"][0]
+                target = card["verification_targets"][0]
+                rendered = _neutral_verification_links([card], {target})
+                self.assertIn(f"[{card['id']}]", rendered)
+                self.assertIn(f"target ID(s): {target}.", rendered)
+                self.assertNotIn("valid", rendered)
+                self.assertNotIn(scenario["verification_results"][target]["content"], rendered)
+                self.assertNotIn("-P", rendered)
+                validate_mediator(chair("verify", target), known_ids={target}, interventions_left=1)
+                with self.assertRaisesRegex(ValueError, "known evidence ID"):
+                    validate_mediator(chair("verify", card["id"]), known_ids={target}, interventions_left=1)
+                hidden = _neutral_verification_links([card], set())
+                self.assertNotIn(target, hidden)
+                self.assertIn("no linked target available", hidden)
+
+    def test_target_links_follow_card_timing_and_prior_disclosure(self):
+        actors = [actor_intent(20, "collect", ["G01"]),
+                  actor_final(20, "collect", [], accepts=False),
+                  actor_intent(60, "collect", ["G06-P"]),
+                  actor_final(60, "collect", [], accepts=False),
+                  actor_intent(20, "collect", []),
+                  actor_final(20, "collect", [], accepts=False)]
+        models = seats(a=actors, mediator=[chair(), chair("verify", "G06-P"), chair()])
+        result = execute(models)
+        self.assertEqual(result["run_status"], "succeeded", result.get("error"))
+        prompts = [call["messages"][-1]["content"] for call in models["M"].client.calls]
+        link = "[M02] offers a check of target ID(s): G06-P."
+        self.assertNotIn(link, prompts[0])
+        self.assertIn(link, prompts[1])
+        self.assertEqual(result["rounds"][2]["delivered_verifications"][0]["target_id"], "G06-P")
+        self.assertFalse(result["rounds"][2]["delivered_verifications"][0]["valid"])
+        for client in (models["A"].client, models["B"].client):
+            self.assertNotIn(link, json.dumps(client.calls))
+
+    def test_scenario_rejects_invalid_or_future_target_links(self):
+        scenario = load_scenario(SCENARIO)
+        for targets in (None, "G06-P", [], ["missing"], ["M02"], ["G08"],
+                        ["G06-P", "G06-P"]):
+            with self.subTest(targets=targets), tempfile.TemporaryDirectory() as directory:
+                data = copy.deepcopy(scenario)
+                data["episodes"][1]["evidence"]["mediator"][0]["verification_targets"] = targets
+                path = Path(directory) / "scenario.json"
+                path.write_text(json.dumps(data))
+                with self.assertRaisesRegex(ValueError, "verification_targets"):
+                    load_scenario(path)
+
     def test_verification_repair_explains_live_smoke_contract_failures(self):
         cases = [
             (chair("verify", "G01", None), "non-empty"),

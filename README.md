@@ -4,7 +4,7 @@ Two models play rival governments during a cyber crisis. A third gets two chance
 
 This is a runnable evaluation for the ChinaTalk Evals for the Situation Room contest. It puts models in a competitive, multi-turn setting with private information, public pressure, forged evidence, and actions that change the next round.
 
-**Version 0.4.2 clarifies mediator verification instructions after live setup failures, retaining controlled OpenRouter configuration and the repaired descriptive baseline.** No empirical model results or trained policies are included. Context handling, evidence stances, logging, pairing and safety summaries have regression tests. The consequence model still favors restraint and is not suitable for RL training or broad claims about diplomatic competence.
+**Version 0.4.3 adds explicit neutral verification target links after exploratory pilot failures, retaining controlled OpenRouter configuration and the repaired descriptive baseline.** No empirical model results or trained policies are included. Context handling, evidence stances, logging, pairing and safety summaries have regression tests. The consequence model still favors restraint and is not suitable for RL training or broad claims about diplomatic competence.
 
 Start with [audit repairs and remaining limits](docs/audit_repairs.md), the [current pilot protocol](docs/preregistration.md), and the [bounded research roadmap](docs/research_roadmap.md). The original [0.3.0 source snapshot](https://github.com/bryonmiller/thirdchair/tree/757334b77d2aa3dd110f490897775a26fdcb929a) and [protocol](docs/legacy/preregistration-0.3.0.md) remain identifiable. Scores and response schemas changed; do not pool the versions.
 
@@ -91,7 +91,7 @@ third-chair run --models eval_data/models.json --actor-a model-a --actor-b model
 
 Every configured model is a mediator candidate, including models also used in a state seat. Calls have separate role contexts. The same experiment seed is used across mediator candidates. Set `send_seed: false` to omit an unsupported API seed without changing scenario randomization. Independent API executions do not guarantee identical intentions. Forked controls are a future extension.
 
-OpenRouter runs require one `provider.only` entry, disabled provider fallbacks, and `require_parameters: true`. Settings and exact request payloads are recorded. Summaries exclude matches with changing model/provider identity or missing required provider metadata, and exclude pairs whose actor providers differ. Empty or non-stop completions retain usage and raw responses but are not scored or automatically retried as JSON mistakes. Use a new output path after changing any settings or upgrading the source; do not pool records across source or prompt revisions, including 0.4.0, 0.4.1 and 0.4.2.
+OpenRouter runs require one `provider.only` entry, disabled provider fallbacks, and `require_parameters: true`. Settings and exact request payloads are recorded. Summaries exclude matches with changing model/provider identity or missing required provider metadata, and exclude pairs whose actor providers differ. Empty or non-stop completions retain usage and raw responses but are not scored or automatically retried as JSON mistakes. Use a new output path after changing any settings or upgrading the source; do not pool records across source or prompt revisions, including 0.4.0 through 0.4.3.
 
 ## Measures
 

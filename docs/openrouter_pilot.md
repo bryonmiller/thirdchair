@@ -1,6 +1,6 @@
 # OpenRouter pilot setup
 
-Version 0.4.2 supports controlled OpenRouter requests and clarifies the mediator action contract after live setup failures. Offline and simulated-HTTP tests pass; the revised prompt still requires a real-provider smoke run. This guide prepares an exploratory evaluation of the existing three-scenario baseline. It does not authorize RL training or establish a confirmatory sample size.
+Version 0.4.3 supports controlled OpenRouter requests, explicit mediator action rules and neutral verification target links after exploratory setup failures. Offline and simulated-HTTP tests pass; the revised prompt still requires a real-provider smoke run. This guide prepares an exploratory evaluation of the existing three-scenario baseline. It does not authorize RL training or establish a confirmatory sample size.
 
 ## Configure three models
 
@@ -79,6 +79,14 @@ If a response lacks provider identity, do not infer it from the requested model 
 Version 0.4.2 explicitly requires a non-empty public announcement for a verification request and exactly one listed evidence ID in `target_evidence_id`. It preserves the validator's existing acceptance rules, correction-attempt limit, action costs and scoring. The model must supply its own announcement; the runner does not invent text or silently repair an invalid action.
 
 Keep the original failed setup files and use a new filename such as `results/openrouter-smoke-v3.jsonl`. Repeat all six diagnostic matches under the new source revision. Do not fill the failed pair with a new successful run or pool old and new prompt versions. Inspect initial validation failures and correction attempts even when a match eventually succeeds; they contribute to cost and interface reliability. A clean setup batch is a readiness check, not proof of a low failure rate.
+
+## Migrating after the verification target-link repair
+
+Version 0.4.3 adds `verification_targets` to neutral cards that already offered a named document check. The prompt links the liaison card to the target evidence ID, provided that target is already in the mediator's checkable set. It does not reveal uncited private evidence or expand the available actions. Selecting the liaison ID still fails validation; the runner does not silently substitute the target. Other opaque cited IDs may still have undisclosed contents, so the prompt explicitly forbids inventing descriptions from IDs alone.
+
+Keep all 0.4.2 pilot records, including incomplete matches. Start a separate diagnostic across all three scenarios using a new output filename such as `results/openrouter-diagnostic-v043-r1.jsonl`. Inspect failure counts and denominators before comparing outcomes. Do not patch prompts per model, replace failed cells until they pass, or present success-only averages as overall model performance.
+
+These links describe announced check availability, not authenticity. In the current three handcrafted cases, the round-two offers happen to target forged documents. Expanded counterfactual families must vary authenticity and check availability independently before making generalization claims. The cost-of-inaction and accountability model still needs separate research design work.
 
 ## Freeze the exploratory batch
 

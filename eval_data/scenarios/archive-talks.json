@@ -70,7 +70,7 @@
           {"id": "S03", "source": "Stone influence-office memo", "reliability": "high", "valid": true, "content": "An influence office edited and released material obtained by the cyber service, then seeded a false hacktivist payment story."}
         ],
         "mediator": [
-          {"id": "DM02", "source": "Regional police liaison", "reliability": "high", "valid": true, "content": "The liaison can authenticate the financial bulletin and check the cited transaction."}
+          {"id": "DM02", "verification_targets": ["D06-P"], "source": "Regional police liaison", "reliability": "high", "valid": true, "content": "The liaison can authenticate the financial bulletin and check the cited transaction."}
         ]
       }
     },

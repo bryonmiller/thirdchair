@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.4.3 - 2026-10-18
+
+Exploratory pilot responses selected neutral liaison-card IDs when requesting the documents those cards offered to authenticate. The liaison cards did not identify their target documents. This revision clarifies that interface across all three scenarios; it does not erase observed model failures or establish mediation effectiveness.
+
+- Add explicit `verification_targets` to the three existing round-two neutral offers. Render linked IDs only after the neutral card has arrived and the target is already in the mediator's checkable set.
+- Explain that the liaison card is not the target and that opaque IDs do not reveal private contents. Keep the original checkable set, private evidence text, validity labels, verification results, scoring, and action limits unchanged.
+- Validate links and test opaque-ID remapping, withheld/future targets, private evidence boundaries, and delayed verification of the actual target. Invalid liaison-card selections remain invalid; no automatic substitution is performed.
+
+Migration: preserve all 0.4.2 pilot successes and failures. Source and scenario hashes change, so use a separate 0.4.3 diagnostic batch. Do not rerun only failed cells or pool source versions. Live adherence to the revised interface remains untested. This repair addresses an information-presentation defect, not the outstanding accountability, inaction-cost, or generalization limitations.
+
 ## 0.4.2 - 2026-10-18
 
 Live setup responses exposed ambiguous verification instructions: models supplied empty or null messages, or requested multiple checks without a target. This is a prompt and diagnostic repair, not a change to scoring or accepted actions.
