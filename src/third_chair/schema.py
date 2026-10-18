@@ -143,7 +143,10 @@ def validate_mediator(
     _probability(value["predicted_escalation"], "predicted_escalation")
     _short_text(value["reason"], "reason", 100)
     if not isinstance(value["message"], str) or len(value["message"].split()) > 120:
-        raise ValueError("message must be a string of at most 120 words")
+        raise ValueError(
+            "message must be a string of at most 120 words, never null; "
+            "every intervention, including verify, requires non-empty text"
+        )
 
     target = value["target_evidence_id"]
     if target is not None and not isinstance(target, str):
@@ -154,10 +157,17 @@ def validate_mediator(
         if value["channel"] == "hold":
             raise ValueError("An intervention cannot use the hold channel")
         if not value["message"].strip():
-            raise ValueError("An intervention requires a message")
+            raise ValueError(
+                "An intervention requires a message: set message to non-empty text, "
+                "including for verify; announce the requested check without claiming its result"
+            )
         if value["channel"] == "verify":
             if target not in known_ids:
-                raise ValueError("A verification request needs a known evidence ID")
+                raise ValueError(
+                    "A verification request needs a known evidence ID: set target_evidence_id "
+                    "to exactly one string from the listed checkable IDs, not null or multiple IDs; "
+                    "the message must concern only that target"
+                )
         elif target is not None:
             raise ValueError("Only verification may name target_evidence_id")
     else:

@@ -78,6 +78,46 @@ def fixture_pair(active_false=False, empty_false=False):
 
 
 class ContextTests(unittest.TestCase):
+    def test_verification_repair_explains_live_smoke_contract_failures(self):
+        cases = [
+            (chair("verify", "G01", None), "non-empty"),
+            (chair("verify", "G01", ""), "including for verify"),
+            (chair("verify", None, "Check G01 and G02."), "exactly one string"),
+        ]
+        for bad_move, guidance in cases:
+            with self.subTest(bad_move=bad_move):
+                good_move = chair("verify", "G01", "Please check G01.")
+                actor_moves = [actor_intent(20, "collect", ["G01"]),
+                               actor_final(20, "collect", [], accepts=False)] * 3
+                models = seats(a=actor_moves, mediator=[bad_move, good_move, chair(), chair()])
+                result = execute(models)
+                self.assertEqual(result["run_status"], "succeeded", result.get("error"))
+                calls = models["M"].client.calls
+                self.assertEqual(len(calls), 4)  # One correction, not a new intervention.
+                prompt = calls[0]["messages"][-1]["content"]
+                self.assertIn("INCLUDING verify", prompt)
+                self.assertIn("exactly ONE string", prompt)
+                self.assertIn("visible to both states", prompt)
+                self.assertIn(guidance, calls[1]["messages"][-1]["content"])
+                self.assertEqual(result["scores"]["interventions_used"], 1)
+                checks = result["rounds"][1]["delivered_verifications"]
+                self.assertEqual([check["target_id"] for check in checks], ["G01"])
+                invalid = [event for event in result["events"]
+                           if event["status"] == "invalid_response"]
+                self.assertEqual(len(invalid), 1)
+
+    def test_repeated_empty_verification_still_fails_and_preserves_attempts(self):
+        models = seats(a=[actor_intent(20, "collect", ["G01"])],
+                       mediator=[chair("verify", "G01", None),
+                                 chair("verify", "G01", "")])
+        result = execute(models)
+        self.assertEqual(result["run_status"], "failed")
+        self.assertEqual(result["failure_stage"], "round_1_mediator")
+        self.assertEqual(len(models["M"].client.calls), 2)
+        invalid = [event for event in result["events"]
+                   if event["status"] == "invalid_response"]
+        self.assertEqual(len(invalid), 2)
+
     def test_final_context_preserves_evidence_and_delayed_check(self):
         a = [actor_intent(20, "collect", ["G01"]), actor_final(20, "collect", [], accepts=False),
              actor_intent(70, "collect", ["G06-P"]), actor_final(70, "collect", [], accepts=False),

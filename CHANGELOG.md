@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.4.2 - 2026-10-18
+
+Live setup responses exposed ambiguous verification instructions: models supplied empty or null messages, or requested multiple checks without a target. This is a prompt and diagnostic repair, not a change to scoring or accepted actions.
+
+- Explicitly describe hold, communication and verification field combinations; every intervention includes a non-empty message and verification selects exactly one listed evidence ID.
+- Explain that the verification message is public and cannot assert the result of a pending check.
+- Give complete correction guidance for null/empty messages and missing verification targets.
+- Add simulated regression cases for the observed failures, a valid correction with delayed delivery and one intervention charge, and persistent invalid responses that remain failed.
+
+Migration: retain the failed setup logs. Use a new output filename and rerun every diagnostic condition under 0.4.2; do not combine earlier successes with repaired runs. Local tests cannot establish live-model adherence to the revised prompt. Repeat the live diagnostic before freezing a research batch. Crisis dynamics and scoring remain `baseline-0.4.0`.
+
 ## 0.4.1 - 2026-10-17
 
 OpenRouter controls for an exploratory live-model pilot. No live-provider trials were run to validate this release; HTTP integration tests use simulated responses. Crisis dynamics and scoring remain `baseline-0.4.0`.

@@ -1,6 +1,6 @@
 # OpenRouter pilot setup
 
-Version 0.4.1 supports controlled OpenRouter requests. Offline and simulated-HTTP tests pass; a real-provider smoke run is still required. This guide prepares an exploratory evaluation of the existing three-scenario baseline. It does not authorize RL training or establish a confirmatory sample size.
+Version 0.4.2 supports controlled OpenRouter requests and clarifies the mediator action contract after live setup failures. Offline and simulated-HTTP tests pass; the revised prompt still requires a real-provider smoke run. This guide prepares an exploratory evaluation of the existing three-scenario baseline. It does not authorize RL training or establish a confirmatory sample size.
 
 ## Configure three models
 
@@ -73,6 +73,12 @@ The client requests `X-OpenRouter-Metadata: enabled`. It reads a reported top-le
 An empty response or a finish reason other than `stop` stops that model turn without a JSON-correction retry. Usage and raw responses remain logged. A match failure does not cancel the rest of the scheduled matches. Ordinary invalid JSON still permits one correction; transport failures can trigger additional requests. The 81-turn estimate is not a spending cap. A seed does not guarantee deterministic API behavior.
 
 If a response lacks provider identity, do not infer it from the requested model or silently count the pair. Inspect routing metadata and caching/account settings. OpenRouter documents that cache hits can omit router metadata. Keep such cases excluded until provenance is resolved. Routing metadata and matching provider names do not prove that weights, quantization or infrastructure stayed identical.
+
+## Migrating after the verification prompt repair
+
+Version 0.4.2 explicitly requires a non-empty public announcement for a verification request and exactly one listed evidence ID in `target_evidence_id`. It preserves the validator's existing acceptance rules, correction-attempt limit, action costs and scoring. The model must supply its own announcement; the runner does not invent text or silently repair an invalid action.
+
+Keep the original failed setup files and use a new filename such as `results/openrouter-smoke-v3.jsonl`. Repeat all six diagnostic matches under the new source revision. Do not fill the failed pair with a new successful run or pool old and new prompt versions. Inspect initial validation failures and correction attempts even when a match eventually succeeds; they contribute to cost and interface reliability. A clean setup batch is a readiness check, not proof of a low failure rate.
 
 ## Freeze the exploratory batch
 
