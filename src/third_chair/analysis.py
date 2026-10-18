@@ -10,7 +10,7 @@ from typing import Any, Iterable
 
 from . import __version__
 from .provenance import fingerprint
-from .measurement import measurement_report, pair_measures
+from .measurement import measurement_report, pair_measures, post_verification_comparisons
 
 
 def load_records(paths: Iterable[str | Path]) -> list[dict[str, Any]]:
@@ -136,6 +136,7 @@ def summarize_records(records: list[dict[str, Any]]) -> dict[str, Any]:
                 "state_a_model": key[3],
                 "state_b_model": key[4],
                 "mediator_model": key[5],
+                "mediator_policy": active.get("manifest", {}).get("mediator_policy"),
                 "returned_models": active.get("returned_models", {}),
                 "returned_providers": active.get("returned_providers", {}),
                 "mediation_lift": lift,
@@ -277,6 +278,9 @@ def summarize_records(records: list[dict[str, Any]]) -> dict[str, Any]:
     warnings.append("False peace is the narrow legacy predicate, not a complete accountability measure.")
     warnings.append("Reported probabilities are model outputs, not validated private beliefs; Brier accuracy is not calibration.")
     warnings.append("Repeated calls and evidence-ID permutations within a scenario are not independent crisis families.")
+    communication = post_verification_comparisons(records, {id(item) for item in eligible})
+    if communication:
+        warnings.append("Post-verification contrasts use independently executed trajectories, not a shared-prefix fork. Timing is imposed by protocol.")
     return {
         "schema_version": __version__,
         "warnings": warnings,
@@ -289,6 +293,7 @@ def summarize_records(records: list[dict[str, Any]]) -> dict[str, Any]:
         "actors": actor_rows,
         "pairs": pairs,
         "measurement": measurement_report(records, pairs, {id(item) for item in eligible}),
+        "post_verification_comparisons": communication,
         "failures": [
             {
                 "match_id": item.get("match_id"),
@@ -357,6 +362,16 @@ def render_markdown(summary: dict[str, Any]) -> str:
         lines.append(f"| {cell['scenario_id']} / {cell['mediator']} | {cell['complete_pairs']} | "
                      f"{a['failed']} / {e['failed']} | {cell['mean_brier_improvement_complete_pairs']} | "
                      f"{display} ({a['wrong_attribution_eligible_matches']}) |")
+    if summary.get("post_verification_comparisons"):
+        lines.extend(["", "## Message versus scheduled verification only", "",
+                      "Positive differences favor the message condition. These are independent runs.", "",
+                      "| Scenario / mediator | Status | Cost reduction | Brier improvement | Pre-message probability difference |",
+                      "| --- | --- | ---: | ---: | ---: |"])
+        for item in summary["post_verification_comparisons"]:
+            lines.append(f"| {item['scenario_id']} / {item.get('mediator', 'unavailable')} | "
+                         f"{item['status']} | {item['cost_reduction_vs_verification']} | "
+                         f"{item['brier_improvement_vs_verification']} | "
+                         f"{item.get('pre_message_probability_difference')} |")
     lines.extend(["", "## Interpretation limits", "", *[f"- {w}" for w in summary.get("warnings", [])]])
     lines.extend(
         [

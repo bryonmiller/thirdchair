@@ -7,8 +7,9 @@ from collections import Counter, defaultdict
 from typing import Any
 
 from .provenance import fingerprint
+from .policies import DELAYED_MESSAGE, DELAYED_VERIFICATION
 
-MEASUREMENT_VERSION = "evidence-audit-1"
+MEASUREMENT_VERSION = "evidence-audit-2"
 
 
 def record_measures(record: dict[str, Any]) -> dict[str, Any] | None:
@@ -34,13 +35,16 @@ def record_measures(record: dict[str, Any]) -> dict[str, Any] | None:
     components["trust_deficit"] = sum(100 - row["resolution"]["state"]["channel_trust"]
                                      for row in rounds)
     used = 0
-    voluntary_holds = forced_holds = 0
+    voluntary_holds = forced_holds = protocol_holds = 0
     # New observations distinguish choice from exhausted-budget holds. Legacy logs
     # can still identify a voluntary hold when an actual mediator call is present.
     for row in rounds:
         if row["mediator"]["intervene"]:
             used += 1
         elif record["mode"] == "active":
+            if row.get("mediator_decision_origin") == "protocol":
+                protocol_holds += 1
+                continue
             obs = row.get("mediator_observation")
             if obs is not None:
                 if obs["interventions_left"] > 0:
@@ -71,6 +75,7 @@ def record_measures(record: dict[str, Any]) -> dict[str, Any] | None:
         "terminal_verification_requests": sum(row["round"] == rounds[-1]["round"] for row in checks),
         "verification_results_delivered": sum(len(row["delivered_verifications"]) for row in rounds),
         "voluntary_holds": voluntary_holds, "budget_forced_holds": forced_holds,
+        "protocol_forced_holds": protocol_holds,
         "interventions_used": used,
     }
 
@@ -92,6 +97,89 @@ def pair_measures(active: dict[str, Any], empty: dict[str, Any]) -> dict[str, An
         "component_lifts": {key: round(e["cost_components"][key] - value, 6)
                             for key, value in a["cost_components"].items()},
     }
+
+
+def post_verification_comparisons(records: list[dict[str, Any]],
+                                 eligible_record_ids: set[int]) -> list[dict[str, Any]]:
+    """Direct scheduled-policy contrasts, separate from active/empty lift.
+
+    These are independent runs, not shared-prefix continuations. Missing,
+    ambiguous, identity-incompatible, or noncompliant arms remain unscored.
+    """
+    groups: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for record in records:
+        manifest = record.get("manifest", {})
+        if record["mode"] != "active" or manifest.get("mediator_policy") not in {
+            DELAYED_MESSAGE, DELAYED_VERIFICATION
+        }:
+            continue
+        key = fingerprint({
+            "scenario": record["scenario_id"], "repetition": record["repetition"],
+            "seed": record.get("seed"), "schema": record.get("schema_version"),
+            "actors": {role: record["roles"][role] for role in ("a", "b")},
+            "design": {k: v for k, v in manifest.items()
+                       if k not in {"configuration_id", "roles", "mediator_policy"}},
+        })
+        groups[key].append(record)
+    result = []
+    for key, rows in sorted(groups.items()):
+        arms = {policy: [r for r in rows if r["manifest"]["mediator_policy"] == policy]
+                for policy in (DELAYED_MESSAGE, DELAYED_VERIFICATION)}
+        row: dict[str, Any] = {
+            "comparison_id": key, "scenario_id": rows[0]["scenario_id"],
+            "repetition": rows[0]["repetition"], "seed": rows[0].get("seed"),
+            "design": "independent_runs_same_scheduled_check",
+            "arms": {policy: [{"match_id": r.get("match_id"), "status": r["run_status"],
+                               "identity_eligible": id(r) in eligible_record_ids} for r in values]
+                     for policy, values in arms.items()},
+            "status": "missing_or_ambiguous_arm",
+            "cost_reduction_vs_verification": None,
+            "brier_improvement_vs_verification": None,
+        }
+        result.append(row)
+        if any(len(values) != 1 for values in arms.values()):
+            continue
+        message, control = arms[DELAYED_MESSAGE][0], arms[DELAYED_VERIFICATION][0]
+        row["mediator"] = message["roles"]["mediator"]["label"]
+        if any(r["run_status"] != "succeeded" or id(r) not in eligible_record_ids
+               for r in (message, control)):
+            row["status"] = "failed_or_identity_excluded_arm"
+            continue
+        if any(message.get(field, {}).get(role, []) != control.get(field, {}).get(role, [])
+               for field in ("returned_models", "returned_providers") for role in ("a", "b")):
+            row["status"] = "incompatible_actor_identity"
+            continue
+        mr, cr = message["rounds"], control["rounds"]
+        if (len(mr) != 3 or len(cr) != 3
+                or [r["mediator"]["channel"] for r in mr] != ["hold", "verify", "joint"]
+                or [r["mediator"]["channel"] for r in cr] != ["hold", "verify", "hold"]
+                or any(mr[1]["mediator"][k] != cr[1]["mediator"][k]
+                       for k in ("intervene", "channel", "message", "target_evidence_id"))
+                or len(mr[2]["delivered_verifications"]) != 1
+                or mr[2]["delivered_verifications"] != cr[2]["delivered_verifications"]
+                or message.get("evidence_id_map") != control.get("evidence_id_map")):
+            row["status"] = "scheduled_check_mismatch"
+            continue
+        mm, cm = record_measures(message), record_measures(control)
+        if mm is None or cm is None:
+            row["status"] = "unmeasurable_arm"
+            continue
+        row.update(
+            status="complete",
+            cost_reduction_vs_verification=round(control["scores"]["crisis_cost"] - message["scores"]["crisis_cost"], 2),
+            brier_improvement_vs_verification=round(cm["attribution_brier"] - mm["attribution_brier"], 6),
+            message_final_probability=mm["final_reported_probability_a"],
+            verification_final_probability=cm["final_reported_probability_a"],
+            message_false_public_attribution=mm["false_public_attribution_final"],
+            verification_false_public_attribution=cm["false_public_attribution_final"],
+            message_final_posture_a=mr[2]["final_moves"]["a"]["posture"],
+            verification_final_posture_a=cr[2]["final_moves"]["a"]["posture"],
+            pre_message_probability_difference=round((mr[2]["intents"]["a"]["belief_opponent_responsible"]
+                                                       - cr[2]["intents"]["a"]["belief_opponent_responsible"]) / 100, 6),
+            first_two_rounds_cost_difference=round(sum(r["resolution"]["crisis_cost"] for r in mr[:2])
+                                                  - sum(r["resolution"]["crisis_cost"] for r in cr[:2]), 2),
+        )
+    return result
 
 
 def measurement_report(
@@ -123,7 +211,7 @@ def measurement_report(
             def rate(items: list[dict[str, Any]], field: str) -> float | None:
                 return round(sum(m[field] for m in items) / len(items), 6) if items else None
             terminal = [e for row in attempts for e in row.get("events", [])
-                        if e.get("status") != "started" and e.get("event_type") != "scripted_policy"]
+                        if e.get("status") != "started" and e.get("event_type") not in {"scripted_policy", "protocol_action"}]
             modes[mode] = {
                 "attempted": len(attempts), "successful": len(successes),
                 "failed": len(attempts) - len(successes),
@@ -142,6 +230,7 @@ def measurement_report(
                 "intervention_channels": dict(sum((Counter(m["intervention_channels"]) for m in measurements), Counter())),
                 "voluntary_holds": sum(m["voluntary_holds"] for m in measurements),
                 "budget_forced_holds": sum(m["budget_forced_holds"] for m in measurements),
+                "protocol_forced_holds": sum(m["protocol_forced_holds"] for m in measurements),
             }
         # A bounded missing-outcome analysis for Brier improvement only. Each
         # unknown contrast lies in [-1, 1]; it is not imputed as zero or failure.
@@ -152,6 +241,7 @@ def measurement_report(
             "cell_id": key, "scenario_id": first["scenario_id"],
             "family_id": first.get("scenario_design", {}).get("family_id", first["scenario_id"]),
             "mediator": first["roles"]["mediator"]["label"],
+            "mediator_policy": first.get("manifest", {}).get("mediator_policy"),
             "actor_a": first["roles"]["a"]["label"], "actor_b": first["roles"]["b"]["label"],
             "source_sha256": first.get("manifest", {}).get("source_sha256"),
             "scenario_sha256": first.get("manifest", {}).get("scenario_sha256"),

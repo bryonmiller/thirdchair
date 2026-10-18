@@ -1,5 +1,7 @@
 # Crisis mediation research roadmap
 
+Current next step: the [0.6.0 post-verification mediation diagnostic](post_verification_protocol.md) fixes the third model as mediator and reserves its final intervention for communication after a check. It introduces no new crisis consequences or training. Independent review may remain pending for a labeled engineering smoke; it remains required before the substantive larger study.
+
 The [0.5.0 methodology review](methodology_review.md) and [bounded evidence-access diagnostic](followup_protocol.md) guide immediate work within the mediation project. The diagnostic supports the original objective of crisis de-escalation with epistemic integrity. The environment extensions and RL work below remain proposals. The September 2026 [ProMediConv preprint](https://arxiv.org/html/2609.11101v1) trains a mediation strategy planner with RL in legal disputes. This overlaps with our proposed method, but does not answer the interstate de-escalation question. Neither learned strategy selection nor a change of domain alone establishes a contribution.
 
 ## Question and contribution
@@ -12,7 +14,7 @@ The targeted review suggests a plausible question joining limited delayed verifi
 
 ## Immediate sequence within the mediation study
 
-1. Complete the bounded evidence-access diagnostic after independent review. Its attribution-first analysis tests whether information availability explains an observed failure; it does not redefine mediation success.
+1. Complete the bounded evidence-access engineering diagnostic with its review status recorded. Obtain independent review before substantive research expansion. Its attribution-first analysis tests whether information availability explains an observed failure; it does not redefine mediation success.
 2. Evaluate empty chair, the verification comparator, and full LLM mediation under matched actor configurations and information access. Report modeled de-escalation, attribution, and accountability indicators separately, including actual communication use and failed runs. A full-policy difference is not a clean estimate of communication: add a controlled ablation matching verification decisions/results and budgets before making that claim.
 3. Develop and independently review a small set of meaningful reciprocal-restraint, temporary-pause, and containment opportunities. Connect proposals to observable actor choices and within-horizon implementation. Define unsupported concessions and preserved inquiry explicitly; do not award a numerical bonus for proposing an agreement or claiming to accept one. Freeze this new design before collecting its results.
 

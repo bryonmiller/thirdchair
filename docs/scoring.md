@@ -1,5 +1,7 @@
 # Scoring guide: audited baseline 0.4.0
 
+Release 0.6.0 adds `evidence-audit-2`: protocol-forced holds are distinct from voluntary and budget-forced holds, and scheduled message-versus-verification contrasts appear separately from active/empty lift. The numerical engine and existing score formulas are unchanged. See the [post-verification protocol](post_verification_protocol.md) for definitions and independent-run limitations.
+
 The numerical engine remains `baseline-0.4.0` in release 0.5.0. A separately labeled `evidence-audit-1` measurement supplement now exposes paired Brier improvement, scenario-specific denominators, wrong-target actions, action timing, trajectories, and component costs. See [measurement definitions and limits](methodology_review.md#measurement-specification). Older logs can be reanalyzed without changing their original scores; label that analysis post-hoc and keep source cohorts separate.
 
 ## Design rule

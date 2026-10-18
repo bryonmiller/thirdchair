@@ -12,7 +12,8 @@ from pathlib import Path
 from typing import Any, Iterable
 
 from .client import OpenAICompatibleClient, is_openrouter
-from .policies import POLICY_LABEL, POLICY_NAME
+from .policies import (POLICY_LABEL, POLICY_NAME, DELAYED_LABEL, DELAYED_MESSAGE,
+                       DELAYED_VERIFICATION, POST_VERIFICATION_STUDY, validate_delayed_scenario)
 from .runner import ModelSeat, run_match
 from .provenance import MAX_TOKENS, fingerprint, pair_identity, run_manifest, seat_config, source_digest
 from .scenario import load_scenario
@@ -210,6 +211,7 @@ def build_schedule(
     fixed_a: str | None = None,
     fixed_b: str | None = None,
     mediator_policy: str = "llm",
+    mediator_label: str | None = None,
     order_seed: int | None = None,
 ) -> list[dict[str, Any]]:
     if repetitions < 1:
@@ -220,10 +222,21 @@ def build_schedule(
         raise ValueError("Specify both fixed actor labels")
     if fixed_a and (fixed_a not in labels or fixed_b not in labels):
         raise ValueError("Fixed actors must be configured model labels")
-    if mediator_policy not in {"llm", POLICY_NAME}:
+    if mediator_policy not in {"llm", POLICY_NAME, DELAYED_MESSAGE,
+                               DELAYED_VERIFICATION, POST_VERIFICATION_STUDY}:
         raise ValueError("Unknown mediator policy")
-    if mediator_policy != "llm" and (not fixed_a or POLICY_LABEL in labels):
-        raise ValueError("Scripted mediation requires fixed actors and a non-reserved model label")
+    if {POLICY_LABEL, DELAYED_LABEL} & set(labels):
+        raise ValueError("Configured model labels cannot use reserved policy labels")
+    if mediator_policy != "llm" and not fixed_a:
+        raise ValueError("Scheduled or scripted mediation requires fixed actors")
+    if mediator_label and (not fixed_a or mediator_label not in labels):
+        raise ValueError("A selected mediator requires fixed actors and a configured label")
+    if mediator_policy in {POLICY_NAME, DELAYED_VERIFICATION} and mediator_label:
+        raise ValueError("A scripted-only policy does not select an LLM mediator")
+    if mediator_policy in {DELAYED_MESSAGE, POST_VERIFICATION_STUDY} and (
+        not mediator_label or len({fixed_a, fixed_b, mediator_label}) != 3
+    ):
+        raise ValueError("The post-verification study requires three distinct fixed model labels")
     if not modes or len(modes) != len(set(modes)) or not set(modes) <= {"active", "empty"}:
         raise ValueError("modes must contain active, empty, or both")
     schedule: list[dict[str, Any]] = []
@@ -239,11 +252,20 @@ def build_schedule(
         scenario_ids.add(scenario["id"])
         family = scenario.get("design", {}).get("family_id", scenario["id"])
         family_index = family_indices.setdefault(family, len(family_indices))
-        mediator_labels = [POLICY_LABEL] if mediator_policy != "llm" else sorted(labels)
-        role_sets = ([(fixed_a, fixed_b, label) for label in mediator_labels] if fixed_a else
-                     assignments(labels, rotation, reverse=bool(scenario_index % 2)))
+        if mediator_policy in {DELAYED_MESSAGE, DELAYED_VERIFICATION, POST_VERIFICATION_STUDY}:
+            validate_delayed_scenario(scenario)
+        if mediator_policy == POST_VERIFICATION_STUDY:
+            role_sets = [(fixed_a, fixed_b, mediator_label, DELAYED_MESSAGE),
+                         (fixed_a, fixed_b, DELAYED_LABEL, DELAYED_VERIFICATION)]
+        else:
+            mediator_labels = ([POLICY_LABEL] if mediator_policy == POLICY_NAME else
+                               [DELAYED_LABEL] if mediator_policy == DELAYED_VERIFICATION else
+                               [mediator_label] if mediator_label else sorted(labels))
+            assignments_for_case = ([(fixed_a, fixed_b, label) for label in mediator_labels] if fixed_a else
+                                    assignments(labels, rotation, reverse=bool(scenario_index % 2)))
+            role_sets = [(*roles, mediator_policy) for roles in assignments_for_case]
         for repetition in range(1, repetitions + 1):
-            for assignment_index, (a, b, mediator) in enumerate(role_sets):
+            for assignment_index, (a, b, mediator, policy) in enumerate(role_sets):
                 pair_seed = (
                     None
                     if seed is None
@@ -254,7 +276,8 @@ def build_schedule(
                 )
                 for mode in modes:
                     identity = fingerprint({"scenario": scenario, "seed": pair_seed,
-                                            "roles": [a, b, mediator], "repetition": repetition})
+                                            "roles": [a, b, mediator], "repetition": repetition,
+                                            "mediator_policy": policy})
                     match_id = (
                         f"{scenario['id']}__a-{a}__b-{b}__m-{mediator}__"
                         f"r{repetition:02d}__{identity[:16]}__{mode}"
@@ -272,7 +295,7 @@ def build_schedule(
                             "mode": mode,
                             "repetition": repetition,
                             "seed": pair_seed,
-                            "mediator_policy": mediator_policy,
+                            "mediator_policy": policy,
                             "order_seed": order_seed,
                         }
                     )
@@ -290,8 +313,10 @@ def build_schedule(
 def estimate_calls(schedule: list[dict[str, Any]]) -> int:
     total = 0
     for item in schedule:
-        per_round = 5 if item["mode"] == "active" and item.get("mediator_policy", "llm") == "llm" else 4
-        total += int(item["rounds"]) * per_round
+        total += int(item["rounds"]) * 4
+        if item["mode"] == "active":
+            policy = item.get("mediator_policy", "llm")
+            total += int(item["rounds"]) if policy == "llm" else int(policy == DELAYED_MESSAGE)
     return total
 
 
@@ -326,6 +351,7 @@ def run_schedule(
     completed: set[str] = set()
     source_hash = source_digest()
     order_seeds = {item.get("order_seed") for item in schedule}
+    policies = {item.get("mediator_policy", "llm") for item in schedule}
     if len(order_seeds) != 1:
         raise ValueError("Use one execution-order seed per schedule")
     for record in existing:
@@ -336,6 +362,8 @@ def run_schedule(
             raise ValueError("Output has missing/incompatible provenance; use a new output path")
         if manifest.get("execution_order_seed") not in order_seeds:
             raise ValueError("Execution-order seed changed; use a new output path")
+        if manifest.get("mediator_policy", "llm") not in policies:
+            raise ValueError("Mediator policy changed; use a new output path")
         for role in ("a", "b", "mediator"):
             previous = manifest["roles"][role]
             label = previous["label"]
@@ -355,7 +383,8 @@ def run_schedule(
         if fingerprint(scenario) != item["scenario_sha256"]:
             raise ValueError("Scenario changed after planning; rebuild the schedule")
         manifest = run_manifest(scenario, {role: model_seats[item[role]] for role in ("a", "b", "mediator")},
-                                order_seed=item.get("order_seed"))
+                                order_seed=item.get("order_seed"),
+                                mediator_policy=item.get("mediator_policy", "llm"))
         for previous in existing:
             if previous["scenario_id"] == item["scenario_id"] and previous["manifest"]["scenario_sha256"] != manifest["scenario_sha256"]:
                 raise ValueError("Scenario changed; use a new output path")
@@ -372,6 +401,7 @@ def run_schedule(
             model_b=model_seats[item["b"]], mediator_model=model_seats[item["mediator"]],
             mode=item["mode"], repetition=item["repetition"], seed=item["seed"],
             order_seed=item.get("order_seed"),
+            mediator_policy=item.get("mediator_policy", "llm"),
             event_sink=lambda event: _append_jsonl(events_path, event),
         )
         if record["match_id"] != item["match_id"]:

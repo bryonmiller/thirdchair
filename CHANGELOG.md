@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.6.0 - 2026-10-18
+
+Post-pilot engineering diagnostic for communication after verification. No live 0.6.0 outcome or learned policy is established by this release.
+
+- Add `--mediator` to select one fixed LLM mediator. The combined `post-verification-study` requires three distinct actor/mediator labels and interleaves both scheduled policies and their empty controls in one randomized schedule.
+- Add `delayed-message` (hold, verify, LLM joint message) and `delayed-verification` (hold, verify, hold). Both request the single available neutral-linked target in round two and receive its result in round three. Missing targets fail explicitly. The communication condition uses the existing response validation and one corrective attempt.
+- Record imposed protocol actions separately from model completions, and identify the policy in manifests and resume checks. Distinguish protocol-forced holds from voluntary abstention. Preserve actual model/provider identity and costs.
+- Add direct compatible message-versus-verification contrasts with failure/missingness status and pre-message trajectory differences. Retain independent active/empty controls; this is not a shared-prefix experiment.
+- Specify an eight-match, 98-turn engineering smoke using GPT-4.1 mini and Gemini 2.5 Flash Lite as actors and Claude Haiku 4.5 as the third-model mediator. Freeze this post-pilot design before new collection; do not infer a model ranking.
+- Clarify the review gate prospectively: engineering smokes may run with independent review pending; substantive research expansion requires that review. Do not retrospectively assert that prior runs met the earlier gate.
+
+Migration: preserve 0.5.0 logs, configuration, and results. Use a new 0.6.0 configuration copy and output path. Scenario content, numerical consequences, actor prompts, and the two-intervention budget are unchanged. Timing is externally prescribed in the new diagnostic and must not be reported as learned behavior.
+
 ## 0.5.0 - 2026-10-18
 
 Post-pilot development revision informed by primary literature and the completed 0.4.3 exploratory runs. No new live API trials or training validate this release.

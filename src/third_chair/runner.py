@@ -13,7 +13,9 @@ from typing import Any, Callable, Protocol
 from . import __version__
 from .client import chat_payload
 from .engine import resolve_round, score_match
-from .policies import LinkedVerificationPolicy
+from .policies import (LinkedVerificationPolicy, DelayedVerificationPolicy, POLICY_NAME,
+                       DELAYED_MESSAGE, DELAYED_VERIFICATION, delayed_verification_decision,
+                       validate_delayed_scenario)
 from .provenance import MAX_TOKENS, pair_identity, run_manifest
 from .scenario import (CrisisState, disclosed_evidence, evidence_text, load_scenario,
                        opaque_evidence_ids, public_evidence)
@@ -474,6 +476,27 @@ def _empty_mediator() -> dict[str, Any]:
     }
 
 
+def _validate_scheduled_message(value: dict[str, Any], *, known_ids: set[str],
+                                interventions_left: int) -> None:
+    validate_mediator(value, known_ids=known_ids, interventions_left=interventions_left)
+    if not value["intervene"] or value["channel"] != "joint":
+        raise ValueError("The delayed-message condition requires a round-three joint intervention")
+
+
+POST_VERIFICATION_INSTRUCTION = """
+EXPERIMENTAL CONDITION: POST-VERIFICATION COMMUNICATION
+The protocol, not your policy, reserved this final intervention after a neutral check.
+Use a joint message now: intervene=true, channel="joint", target_evidence_id=null.
+Interpret what the completed check establishes and what remains uncertain. Propose
+a concrete, proportionate next step that preserves legitimate investigation and
+offers a path to de-escalation. Document authenticity alone does not determine
+which government caused or authorized the incident. Do not invent evidence or
+authority, and do not assume that either government is innocent or guilty.
+Use the same JSON schema and word limits above. This condition requires a message;
+it does not measure autonomous intervention timing or voluntary abstention.
+"""
+
+
 def run_match(
     *,
     scenario_path: str | Path,
@@ -486,15 +509,29 @@ def run_match(
     event_sink: Callable[[dict[str, Any]], None] | None = None,
     evidence_id_mode: str = "opaque",
     order_seed: int | None = None,
+    mediator_policy: str = "llm",
 ) -> dict[str, Any]:
     if mode not in {"active", "empty"}:
         raise ValueError("mode must be active or empty")
     started = time.monotonic()
     scenario = load_scenario(scenario_path)
+    if mediator_policy == "llm":
+        if isinstance(mediator_model.client, DelayedVerificationPolicy):
+            mediator_policy = DELAYED_VERIFICATION
+        elif isinstance(mediator_model.client, LinkedVerificationPolicy):
+            mediator_policy = POLICY_NAME
+    if mediator_policy not in {"llm", POLICY_NAME, DELAYED_MESSAGE, DELAYED_VERIFICATION}:
+        raise ValueError("Unknown executable mediator policy")
+    if mediator_policy in {DELAYED_MESSAGE, DELAYED_VERIFICATION}:
+        validate_delayed_scenario(scenario)
+    if ((mediator_policy == POLICY_NAME) != isinstance(mediator_model.client, LinkedVerificationPolicy)
+            or (mediator_policy == DELAYED_VERIFICATION) != isinstance(mediator_model.client, DelayedVerificationPolicy)):
+        raise ValueError("Mediator policy and client are incompatible")
     seats = {"a": model_a, "b": model_b, "mediator": mediator_model}
     if evidence_id_mode not in {"opaque", "original"}:
         raise ValueError("evidence_id_mode must be opaque or original")
-    manifest = run_manifest(scenario, seats, evidence_id_mode, order_seed=order_seed)
+    manifest = run_manifest(scenario, seats, evidence_id_mode, order_seed=order_seed,
+                            mediator_policy=mediator_policy)
     evidence_id_map = {}
     if evidence_id_mode == "opaque":
         scenario, evidence_id_map = opaque_evidence_ids(scenario, seed=seed, repetition=repetition)
@@ -667,10 +704,26 @@ def run_match(
             )
             partial_round["mediator_observation"] = observation
 
+            decision_origin = "empty"
             if (mode == "active" and interventions_left > 0
-                    and isinstance(mediator_model.client, LinkedVerificationPolicy)):
+                    and mediator_policy == DELAYED_MESSAGE and round_number < 3):
+                stage = f"round_{round_number}_mediator"
+                mediator = delayed_verification_decision(copy.deepcopy(observation))
+                validate_mediator(mediator, known_ids=verifiable_ids,
+                                  interventions_left=interventions_left)
+                decision_origin = "protocol"
+                # This is an imposed action, not a completion from the selected LLM.
+                record_event({
+                    "attempt": 1, "status": "succeeded", "event_type": "protocol_action",
+                    "request": {"policy": mediator_policy, "observation": observation},
+                    "content": json.dumps(mediator, sort_keys=True),
+                    "usage": {"cost": 0}, "transport_attempts": [],
+                })
+            elif (mode == "active" and interventions_left > 0
+                    and isinstance(mediator_model.client, (LinkedVerificationPolicy, DelayedVerificationPolicy))):
                 stage = f"round_{round_number}_mediator"
                 mediator = mediator_model.client.decide(copy.deepcopy(observation))
+                decision_origin = ("protocol" if mediator_policy == DELAYED_VERIFICATION else "scripted_policy")
                 validate_mediator(mediator, known_ids=verifiable_ids,
                                   interventions_left=interventions_left)
                 record_event({
@@ -682,6 +735,9 @@ def run_match(
                 })
             elif mode == "active" and interventions_left > 0:
                 stage = f"round_{round_number}_mediator"
+                decision_origin = "llm"
+                if mediator_policy == DELAYED_MESSAGE and len(completed_verifications) != 1:
+                    raise ValueError("Post-verification message requires the scheduled check result")
                 mediator, attempt_list = _call_for_json(
                     mediator_model,
                     [
@@ -699,12 +755,12 @@ def run_match(
                                 verifiable_ids=verifiable_ids,
                                 verifications=completed_verifications,
                                 neutral_evidence=list(neutral_evidence.values()),
-                            ),
+                            ) + (POST_VERIFICATION_INSTRUCTION if mediator_policy == DELAYED_MESSAGE else ""),
                         },
                     ],
                     event_sink=record_event,
                     seed=_seed(seed, round_number, 3),
-                    validator=lambda value: validate_mediator(
+                    validator=lambda value: (_validate_scheduled_message if mediator_policy == DELAYED_MESSAGE else validate_mediator)(
                         value,
                         known_ids=verifiable_ids,
                         interventions_left=interventions_left,
@@ -714,6 +770,7 @@ def run_match(
             else:
                 mediator = _empty_mediator()
                 if mode == "active":
+                    decision_origin = "budget_exhausted"
                     mediator["reason"] = "Intervention budget exhausted; no policy decision requested."
 
             partial_round["mediator"] = mediator
@@ -820,6 +877,7 @@ def run_match(
                     "delivered_verifications": delivered_now,
                     "intents": {"a": intent_a, "b": intent_b},
                     "mediator": mediator,
+                    "mediator_decision_origin": decision_origin,
                     "mediator_observation": observation,
                     "public_disclosures": [public_evidence(item) for item in
                                            disclosed_evidence(scenario, round_number)],
