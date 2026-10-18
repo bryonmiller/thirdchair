@@ -143,6 +143,9 @@ def _public_history(rounds: list[dict[str, Any]], seat: str) -> str:
     lines: list[str] = []
     for item in rounds:
         lines.append(f"ROUND {item['round']} | {item['clock']}")
+        # Each request is stateless. Preserve the public report as well as the
+        # actors' replies so a later check retains its original claim context.
+        lines.append(f"Public event: {item['public_event']}")
         for actor in ("a", "b"):
             move = item["final_moves"][actor]
             lines.append(

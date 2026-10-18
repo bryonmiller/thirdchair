@@ -109,7 +109,7 @@ def sha256(path: Path) -> str:
 def build_manifest(files: list[Path]) -> Path:
     manifest = {
         "project": "The Third Chair",
-        "version": "0.6.0",
+        "version": "0.6.1",
         "author": "Bryon Miller",
         "research_status": "Post-pilot methodology follow-up; no confirmatory study or trained policy",
         "intended_repository": "https://github.com/bryonmiller/thirdchair",
