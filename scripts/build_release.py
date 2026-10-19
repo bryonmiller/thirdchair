@@ -18,6 +18,7 @@ ARCHIVE_ROOT = "third-chair"
 FIXED_TIME = (2026, 8, 12, 12, 0, 0)
 
 ROOT_FILES = [
+    "AGENTS.md",
     ".gitignore",
     "CHANGELOG.md",
     "CITATION.cff",
@@ -109,7 +110,7 @@ def sha256(path: Path) -> str:
 def build_manifest(files: list[Path]) -> Path:
     manifest = {
         "project": "The Third Chair",
-        "version": "0.6.1",
+        "version": "0.7.0",
         "author": "Bryon Miller",
         "research_status": "Post-pilot methodology follow-up; no confirmatory study or trained policy",
         "intended_repository": "https://github.com/bryonmiller/thirdchair",

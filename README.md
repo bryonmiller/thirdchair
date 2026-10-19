@@ -6,6 +6,8 @@ This is a runnable evaluation for the ChinaTalk Evals for the Situation Room con
 
 The central research question remains: **Can AI mediators de-escalate simulated interstate crises while preserving accurate attribution and avoiding unjustified concessions?** Evidence verification supports that mediation question. The current measures cover only part of it; broader concession and accountability outcomes still need explicit definitions and action consequences.
 
+**Version 0.7.0 adds a separate shared-prefix experiment.** Execute history once through the scheduled verification delivery and both final-round actor intentions, then fork a Claude joint message versus no message. The [prospective protocol](docs/shared_prefix_protocol.md) specifies persistence, cost accounting, outcomes, and limits. No 0.7.0 paid batch has been collected; collection requires an agreed run plan and spending cap. See [current status and research gates](docs/codex_handoff.md).
+
 **Version 0.6.0 adds a controlled post-verification communication diagnostic.** It fixes the third model as mediator, schedules a check in round two, and reserves round three for its joint message. A verification-only policy and empty-chair controls share one randomized schedule. See the [eight-match engineering smoke protocol and commands](docs/post_verification_protocol.md). Timing is imposed by the protocol; this is not a test of autonomous timing or trained policy performance.
 
 **Version 0.6.1 repairs public-event retention.** Later requests now include earlier public event reports alongside the actors' messages, so the mediator can interpret a check in the context of the original public claim. Use the [versioned repair and new-run instructions](docs/public_history_repair.md) before collecting more data. This changes actor and mediator prompts in every condition; preserve the 0.6.0 batch separately.
@@ -16,7 +18,7 @@ Start with [audit repairs and remaining limits](docs/audit_repairs.md), the [cur
 
 For background, read the [methodology review and primary literature](docs/methodology_review.md) and [0.5.0 development protocol](docs/followup_protocol.md), which examines information access. Crisis mediation can preserve dialogue, prevent premature retaliation, or encourage reciprocal restraint without producing a comprehensive settlement. The simulator does not implement negotiated commitments, actor utilities, or post-crisis implementation, so it cannot establish lasting peace. Completed 0.4.3 results remain an exploratory baseline, not a confirmatory evaluation.
 
-The current communication follow-up asks whether the third model helps actors use a check result. Its direct message-versus-verification comparison is separate from active/empty lift. Independently executed controls can differ before the message; shared-prefix controls are not implemented. Preserve all earlier batches and use fresh 0.6.1 output paths.
+The communication follow-up asks whether the third model helps actors use a check result. Its direct message-versus-verification comparison is separate from active/empty lift. The completed 0.6.1 smoke used independent runs, which can differ before the message. The 0.7.0 shared-prefix design fixes that history for a narrower final-message comparison. Preserve earlier batches and use fresh versioned output paths.
 
 ## What the tournament tests
 
@@ -28,7 +30,7 @@ Each match has three seats:
 
 The state models receive different private briefs. They announce a posture, hear the other side, receive any mediator message, and make a final move. The mediator can use a joint channel, send a private message, or spend an intervention to authenticate one disputed evidence item. A verification result arrives in the next round.
 
-Every active-mediator match has an independently executed empty-chair counterpart with the same scenario, role assignment, and seed. Mediation lift is crisis cost without the mediator minus crisis cost with the mediator. The evidence-access diagnostic prioritizes reported attribution Brier error and keeps cost as a separate modeled outcome. This local measurement choice does not replace the project's de-escalation objective.
+In the original tournament design, every active-mediator match has an independently executed empty-chair counterpart with the same scenario, role assignment, and seed. Mediation lift is crisis cost without the mediator minus crisis cost with the mediator. The separate shared-prefix design compares final communication after a shared check and has no full-crisis empty-chair arm. The evidence-access diagnostic prioritizes reported attribution Brier error and keeps cost as a separate modeled outcome. This local measurement choice does not replace the project's de-escalation objective.
 
 Lower tension alone is not enough. The intended research question concerns false concessions and abandoned accountability. The current automated false-peace predicate covers only a narrow subset, so these broader outcomes require human review and a new consequence model.
 
