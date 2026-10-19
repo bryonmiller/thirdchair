@@ -5,7 +5,7 @@ from __future__ import annotations
 import copy
 import json
 import time
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Protocol
@@ -15,8 +15,8 @@ from .client import chat_payload
 from .engine import resolve_round, score_match
 from .policies import (LinkedVerificationPolicy, DelayedVerificationPolicy, POLICY_NAME,
                        DELAYED_MESSAGE, DELAYED_VERIFICATION, delayed_verification_decision,
-                       validate_delayed_scenario)
-from .provenance import MAX_TOKENS, pair_identity, run_manifest
+                       SHARED_PREFIX, validate_delayed_scenario)
+from .provenance import MAX_TOKENS, fingerprint, pair_identity, run_manifest
 from .scenario import (CrisisState, disclosed_evidence, evidence_text, load_scenario,
                        opaque_evidence_ids, public_evidence)
 from .schema import (
@@ -500,6 +500,32 @@ it does not measure autonomous intervention timing or voluntary abstention.
 """
 
 
+def validate_prefix_checkpoint(
+    prefix: dict[str, Any], manifest: dict[str, Any], repetition: int, seed: int | None,
+) -> None:
+    """Reject altered or incompatible evaluator state before making any calls."""
+    expected_id = f"{pair_identity(manifest, repetition, seed)}__prefix"
+    if (prefix.get("record_type") != "shared_prefix_prefix"
+            or prefix.get("run_status") != "prefix_ready"
+            or prefix.get("manifest") != manifest
+            or prefix.get("match_id") != expected_id
+            or prefix.get("repetition") != repetition or prefix.get("seed") != seed):
+        raise ValueError("Incompatible shared prefix; preserve it and use a new output")
+    if prefix.get("checkpoint_sha256") != fingerprint(prefix.get("checkpoint")):
+        raise ValueError("Shared checkpoint fingerprint changed")
+    checkpoint = prefix["checkpoint"]
+    if (checkpoint.get("round_number") != 3 or len(checkpoint.get("rounds", [])) != 2
+            or len(checkpoint.get("completed_verifications", [])) != 1
+            or checkpoint.get("interventions_used") != 1):
+        raise ValueError("Shared checkpoint is not at the required verification/intention boundary")
+    if (prefix.get("rounds") != checkpoint["rounds"]
+            or prefix.get("partial_round", {}).get("intents") != {
+                "a": checkpoint["intent_a"], "b": checkpoint["intent_b"]}
+            or prefix.get("partial_round", {}).get("mediator_observation") != checkpoint["observation"]
+            or checkpoint["observation"]["state"] != CrisisState(**checkpoint["state"]).view()):
+        raise ValueError("Shared prefix transcript and checkpoint disagree")
+
+
 def run_match(
     *,
     scenario_path: str | Path,
@@ -513,6 +539,8 @@ def run_match(
     evidence_id_mode: str = "opaque",
     order_seed: int | None = None,
     mediator_policy: str = "llm",
+    prefix_checkpoint: dict[str, Any] | None = None,
+    shared_branch: str | None = None,
 ) -> dict[str, Any]:
     if mode not in {"active", "empty"}:
         raise ValueError("mode must be active or empty")
@@ -523,9 +551,17 @@ def run_match(
             mediator_policy = DELAYED_VERIFICATION
         elif isinstance(mediator_model.client, LinkedVerificationPolicy):
             mediator_policy = POLICY_NAME
-    if mediator_policy not in {"llm", POLICY_NAME, DELAYED_MESSAGE, DELAYED_VERIFICATION}:
+    if mediator_policy not in {"llm", POLICY_NAME, DELAYED_MESSAGE, DELAYED_VERIFICATION, SHARED_PREFIX}:
         raise ValueError("Unknown executable mediator policy")
-    if mediator_policy in {DELAYED_MESSAGE, DELAYED_VERIFICATION}:
+    shared = mediator_policy == SHARED_PREFIX
+    if shared:
+        if mode != "active" or shared_branch not in {None, "message", "no-message"}:
+            raise ValueError("Shared prefixes require active mode and a valid branch")
+        if (prefix_checkpoint is None) != (shared_branch is None):
+            raise ValueError("A shared continuation requires both checkpoint and branch")
+    elif prefix_checkpoint is not None or shared_branch is not None:
+        raise ValueError("Checkpoints are only supported by the shared-prefix experiment")
+    if mediator_policy in {DELAYED_MESSAGE, DELAYED_VERIFICATION, SHARED_PREFIX}:
         validate_delayed_scenario(scenario)
     if ((mediator_policy == POLICY_NAME) != isinstance(mediator_model.client, LinkedVerificationPolicy)
             or (mediator_policy == DELAYED_VERIFICATION) != isinstance(mediator_model.client, DelayedVerificationPolicy)):
@@ -534,12 +570,18 @@ def run_match(
     if evidence_id_mode not in {"opaque", "original"}:
         raise ValueError("evidence_id_mode must be opaque or original")
     manifest = run_manifest(scenario, seats, evidence_id_mode, order_seed=order_seed,
-                            mediator_policy=mediator_policy)
+                            mediator_policy=mediator_policy,
+                            control_design="shared_prefix_final_message" if shared else "independent_matched_runs")
     evidence_id_map = {}
     if evidence_id_mode == "opaque":
         scenario, evidence_id_map = opaque_evidence_ids(scenario, seed=seed, repetition=repetition)
     pair_id = pair_identity(manifest, repetition, seed)
     match_id = f"{pair_id}__{mode}"
+    if shared:
+        match_id = f"{pair_id}__{shared_branch or 'prefix'}"
+    if prefix_checkpoint is not None:
+        validate_prefix_checkpoint(prefix_checkpoint, manifest, repetition, seed)
+        prefix_checkpoint = copy.deepcopy(prefix_checkpoint)
     events: list[dict[str, Any]] = []
     partial_round: dict[str, Any] = {}
     state = CrisisState.from_scenario(scenario)
@@ -567,7 +609,8 @@ def run_match(
         providers: dict[str, set[str]] = {role: set() for role in seats}
         missing_models = {role: 0 for role in seats}
         missing_providers = {role: 0 for role in seats}
-        for event in events:
+        identity_events = (prefix_checkpoint["events"] if prefix_checkpoint else []) + events
+        for event in identity_events:
             role = event["stage"].rsplit("_", 1)[-1]
             if role in providers and "raw_response" in event:
                 if isinstance(event.get("returned_model"), str) and event["returned_model"].strip():
@@ -578,7 +621,7 @@ def run_match(
                     providers[role].add(event["returned_provider"])
                 else:
                     missing_providers[role] += 1
-        return {
+        result = {
             "schema_version": __version__,
             "manifest": manifest, "pair_id": pair_id, "match_id": match_id,
             "recorded_at": datetime.now(timezone.utc).isoformat(),
@@ -596,120 +639,173 @@ def run_match(
             "events": events, "partial_round": partial_round,
             "duration_seconds": round(time.monotonic() - started, 3),
         }
+        if shared:
+            result.update(record_type="shared_prefix_branch" if shared_branch else "shared_prefix_prefix",
+                          branch=shared_branch, prefix_id=f"{pair_id}__prefix")
+            if prefix_checkpoint:
+                result["checkpoint_sha256"] = prefix_checkpoint["checkpoint_sha256"]
+        return result
 
     try:
         for episode in scenario["episodes"]:
             round_number = int(episode["round"])
-            stage = f"round_{round_number}_setup"
-            partial_round = {"round": round_number, "intents": {}, "final_moves": {}}
+            if prefix_checkpoint is not None:
+                if round_number < 3:
+                    continue
+                checkpoint = prefix_checkpoint["checkpoint"]
+                state = CrisisState(**checkpoint["state"])
+                rounds = copy.deepcopy(checkpoint["rounds"])
+                # Inherited attempts belong to the prefix, not this continuation's bill.
+                for previous in rounds:
+                    previous["attempts"] = {"a": [], "b": [], "mediator": []}
+                known_evidence = {seat: {item["id"]: item for item in cards}
+                                  for seat, cards in checkpoint["known_evidence"].items()}
+                neutral_evidence = {item["id"]: item for item in checkpoint["neutral_evidence"]}
+                completed_verifications = checkpoint["completed_verifications"]
+                verified_invalid_ids = set(checkpoint["verified_invalid_ids"])
+                interventions_used = checkpoint["interventions_used"]
+                intent_a, intent_b = checkpoint["intent_a"], checkpoint["intent_b"]
+                delivered_now = checkpoint["delivered_now"]
+                observation = checkpoint["observation"]
+                evidence_a = list(known_evidence["a"].values())
+                evidence_b = list(known_evidence["b"].values())
+                verification_ids = {item["target_id"] for item in completed_verifications}
+                known_ids_a = set(known_evidence["a"]) | verification_ids
+                known_ids_b = set(known_evidence["b"]) | verification_ids
+                verifiable_ids = set(observation["verifiable_ids"])
+                interventions_left = int(scenario["intervention_budget"]) - interventions_used
+                attempts = {"a": [], "b": [], "mediator": []}
+                partial_round = {"round": round_number, "intents": {"a": intent_a, "b": intent_b},
+                                 "final_moves": {}, "mediator_observation": observation}
+            else:
+                stage = f"round_{round_number}_setup"
+                partial_round = {"round": round_number, "intents": {}, "final_moves": {}}
 
-            delivered_now = pending_verifications
-            pending_verifications = []
-            completed_verifications.extend(delivered_now)
-            for item in delivered_now:
-                if item["valid"] is False:
-                    verified_invalid_ids.add(item["target_id"])
+                delivered_now = pending_verifications
+                pending_verifications = []
+                completed_verifications.extend(delivered_now)
+                for item in delivered_now:
+                    if item["valid"] is False:
+                        verified_invalid_ids.add(item["target_id"])
 
-            for seat in ("a", "b"):
-                for item in episode["evidence"].get(seat, []):
-                    known_evidence[seat][item["id"]] = item
-
-            for item in episode["evidence"].get("mediator", []):
-                neutral_evidence[item["id"]] = item
-            for item in disclosed_evidence(scenario, round_number):
                 for seat in ("a", "b"):
-                    known_evidence[seat][item["id"]] = item
-                neutral_evidence[item["id"]] = item
+                    for item in episode["evidence"].get(seat, []):
+                        known_evidence[seat][item["id"]] = item
 
-            evidence_a = list(known_evidence["a"].values())
-            evidence_b = list(known_evidence["b"].values())
-            verification_ids = {item["target_id"] for item in completed_verifications}
-            known_ids_a = set(known_evidence["a"]) | verification_ids
-            known_ids_b = set(known_evidence["b"]) | verification_ids
-            attempts: dict[str, list[dict[str, Any]]] = {
-                "a": [],
-                "b": [],
-                "mediator": [],
-            }
+                for item in episode["evidence"].get("mediator", []):
+                    neutral_evidence[item["id"]] = item
+                for item in disclosed_evidence(scenario, round_number):
+                    for seat in ("a", "b"):
+                        known_evidence[seat][item["id"]] = item
+                    neutral_evidence[item["id"]] = item
 
-            stage = f"round_{round_number}_intent_a"
-            intent_a, attempt_list = _call_for_json(
-                model_a,
-                [
-                    {"role": "system", "content": _actor_system(scenario, "a")},
-                    {
-                        "role": "user",
-                        "content": _actor_intent_prompt(
-                            scenario=scenario,
-                            seat="a",
-                            state=state,
-                            episode=episode,
-                            evidence=evidence_a,
-                            verifications=completed_verifications,
-                            rounds=rounds,
-                        ),
-                    },
-                ],
-                event_sink=record_event,
-                seed=_seed(seed, round_number, 1),
-                validator=lambda value: validate_actor_intent(
-                    value,
-                    postures=posture_ids,
-                    known_ids=known_ids_a,
-                ),
-            )
-            attempts["a"].extend(attempt_list)
-            partial_round["intents"]["a"] = intent_a
+                evidence_a = list(known_evidence["a"].values())
+                evidence_b = list(known_evidence["b"].values())
+                verification_ids = {item["target_id"] for item in completed_verifications}
+                known_ids_a = set(known_evidence["a"]) | verification_ids
+                known_ids_b = set(known_evidence["b"]) | verification_ids
+                attempts: dict[str, list[dict[str, Any]]] = {
+                    "a": [],
+                    "b": [],
+                    "mediator": [],
+                }
 
-            stage = f"round_{round_number}_intent_b"
-            intent_b, attempt_list = _call_for_json(
-                model_b,
-                [
-                    {"role": "system", "content": _actor_system(scenario, "b")},
-                    {
-                        "role": "user",
-                        "content": _actor_intent_prompt(
-                            scenario=scenario,
-                            seat="b",
-                            state=state,
-                            episode=episode,
-                            evidence=evidence_b,
-                            verifications=completed_verifications,
-                            rounds=rounds,
-                        ),
-                    },
-                ],
-                event_sink=record_event,
-                seed=_seed(seed, round_number, 2),
-                validator=lambda value: validate_actor_intent(
-                    value,
-                    postures=posture_ids,
-                    known_ids=known_ids_b,
-                ),
-            )
-            attempts["b"].extend(attempt_list)
-            partial_round["intents"]["b"] = intent_b
+                stage = f"round_{round_number}_intent_a"
+                intent_a, attempt_list = _call_for_json(
+                    model_a,
+                    [
+                        {"role": "system", "content": _actor_system(scenario, "a")},
+                        {
+                            "role": "user",
+                            "content": _actor_intent_prompt(
+                                scenario=scenario,
+                                seat="a",
+                                state=state,
+                                episode=episode,
+                                evidence=evidence_a,
+                                verifications=completed_verifications,
+                                rounds=rounds,
+                            ),
+                        },
+                    ],
+                    event_sink=record_event,
+                    seed=_seed(seed, round_number, 1),
+                    validator=lambda value: validate_actor_intent(
+                        value,
+                        postures=posture_ids,
+                        known_ids=known_ids_a,
+                    ),
+                )
+                attempts["a"].extend(attempt_list)
+                partial_round["intents"]["a"] = intent_a
 
-            mediator_known.update(intent_a["evidence_ids"])
-            mediator_known.update(intent_b["evidence_ids"])
-            for previous in rounds:
-                for move in previous["final_moves"].values():
-                    mediator_known.update(move["evidence_ids"])
-            mediator_known.update(neutral_evidence)
-            mediator_known.update(item["target_id"] for item in completed_verifications)
-            verifiable_ids = mediator_known & set(scenario["verification_results"])
-            interventions_left = int(scenario["intervention_budget"]) - interventions_used
-            observation = _mediator_observation(
-                scenario=scenario, state=state, episode=episode, intent_a=intent_a,
-                intent_b=intent_b, rounds=rounds, interventions_left=interventions_left,
-                verifiable_ids=verifiable_ids, verifications=completed_verifications,
-                neutral_evidence=list(neutral_evidence.values()),
-            )
-            partial_round["mediator_observation"] = observation
+                stage = f"round_{round_number}_intent_b"
+                intent_b, attempt_list = _call_for_json(
+                    model_b,
+                    [
+                        {"role": "system", "content": _actor_system(scenario, "b")},
+                        {
+                            "role": "user",
+                            "content": _actor_intent_prompt(
+                                scenario=scenario,
+                                seat="b",
+                                state=state,
+                                episode=episode,
+                                evidence=evidence_b,
+                                verifications=completed_verifications,
+                                rounds=rounds,
+                            ),
+                        },
+                    ],
+                    event_sink=record_event,
+                    seed=_seed(seed, round_number, 2),
+                    validator=lambda value: validate_actor_intent(
+                        value,
+                        postures=posture_ids,
+                        known_ids=known_ids_b,
+                    ),
+                )
+                attempts["b"].extend(attempt_list)
+                partial_round["intents"]["b"] = intent_b
+
+                mediator_known.update(intent_a["evidence_ids"])
+                mediator_known.update(intent_b["evidence_ids"])
+                for previous in rounds:
+                    for move in previous["final_moves"].values():
+                        mediator_known.update(move["evidence_ids"])
+                mediator_known.update(neutral_evidence)
+                mediator_known.update(item["target_id"] for item in completed_verifications)
+                verifiable_ids = mediator_known & set(scenario["verification_results"])
+                interventions_left = int(scenario["intervention_budget"]) - interventions_used
+                observation = _mediator_observation(
+                    scenario=scenario, state=state, episode=episode, intent_a=intent_a,
+                    intent_b=intent_b, rounds=rounds, interventions_left=interventions_left,
+                    verifiable_ids=verifiable_ids, verifications=completed_verifications,
+                    neutral_evidence=list(neutral_evidence.values()),
+                )
+                partial_round["mediator_observation"] = observation
+
+            if shared and prefix_checkpoint is None and round_number == 3:
+                if len(completed_verifications) != 1 or interventions_used != 1:
+                    raise ValueError("Shared prefix requires exactly one delivered scheduled check")
+                checkpoint = copy.deepcopy({
+                    "round_number": round_number, "state": asdict(state), "rounds": rounds,
+                    "known_evidence": {seat: list(cards.values()) for seat, cards in known_evidence.items()},
+                    "neutral_evidence": list(neutral_evidence.values()),
+                    "completed_verifications": completed_verifications,
+                    "verified_invalid_ids": sorted(verified_invalid_ids),
+                    "interventions_used": interventions_used,
+                    "intent_a": intent_a, "intent_b": intent_b,
+                    "delivered_now": delivered_now, "observation": observation,
+                })
+                ready = record_base()
+                ready.update(run_status="prefix_ready", checkpoint=checkpoint,
+                             checkpoint_sha256=fingerprint(checkpoint))
+                return ready
 
             decision_origin = "empty"
             if (mode == "active" and interventions_left > 0
-                    and mediator_policy == DELAYED_MESSAGE and round_number < 3):
+                    and mediator_policy in {DELAYED_MESSAGE, SHARED_PREFIX} and round_number < 3):
                 stage = f"round_{round_number}_mediator"
                 mediator = delayed_verification_decision(copy.deepcopy(observation))
                 validate_mediator(mediator, known_ids=verifiable_ids,
@@ -722,6 +818,15 @@ def run_match(
                     "content": json.dumps(mediator, sort_keys=True),
                     "usage": {"cost": 0}, "transport_attempts": [],
                 })
+            elif shared and shared_branch == "no-message":
+                stage = f"round_{round_number}_mediator"
+                mediator = delayed_verification_decision(copy.deepcopy(observation))
+                validate_mediator(mediator, known_ids=verifiable_ids,
+                                  interventions_left=interventions_left)
+                decision_origin = "protocol"
+                record_event({"attempt": 1, "status": "succeeded", "event_type": "protocol_action",
+                              "request": {"policy": SHARED_PREFIX, "observation": observation},
+                              "content": json.dumps(mediator, sort_keys=True), "usage": {"cost": 0}})
             elif (mode == "active" and interventions_left > 0
                     and isinstance(mediator_model.client, (LinkedVerificationPolicy, DelayedVerificationPolicy))):
                 stage = f"round_{round_number}_mediator"
@@ -739,7 +844,7 @@ def run_match(
             elif mode == "active" and interventions_left > 0:
                 stage = f"round_{round_number}_mediator"
                 decision_origin = "llm"
-                if mediator_policy == DELAYED_MESSAGE and len(completed_verifications) != 1:
+                if mediator_policy in {DELAYED_MESSAGE, SHARED_PREFIX} and len(completed_verifications) != 1:
                     raise ValueError("Post-verification message requires the scheduled check result")
                 mediator, attempt_list = _call_for_json(
                     mediator_model,
@@ -758,12 +863,12 @@ def run_match(
                                 verifiable_ids=verifiable_ids,
                                 verifications=completed_verifications,
                                 neutral_evidence=list(neutral_evidence.values()),
-                            ) + (POST_VERIFICATION_INSTRUCTION if mediator_policy == DELAYED_MESSAGE else ""),
+                            ) + (POST_VERIFICATION_INSTRUCTION if mediator_policy in {DELAYED_MESSAGE, SHARED_PREFIX} else ""),
                         },
                     ],
                     event_sink=record_event,
                     seed=_seed(seed, round_number, 3),
-                    validator=lambda value: (_validate_scheduled_message if mediator_policy == DELAYED_MESSAGE else validate_mediator)(
+                    validator=lambda value: (_validate_scheduled_message if mediator_policy in {DELAYED_MESSAGE, SHARED_PREFIX} else validate_mediator)(
                         value,
                         known_ids=verifiable_ids,
                         interventions_left=interventions_left,

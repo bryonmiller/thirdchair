@@ -1,6 +1,6 @@
 # Crisis mediation research roadmap
 
-Current next step: the [0.6.0 post-verification mediation diagnostic](post_verification_protocol.md) fixes the third model as mediator and reserves its final intervention for communication after a check. It introduces no new crisis consequences or training. Independent review may remain pending for a labeled engineering smoke; it remains required before the substantive larger study.
+Current development step: the [0.7.0 shared-prefix diagnostic](shared_prefix_protocol.md) fixes the history through verification and both final-round intentions before comparing communication against no message. The 0.6.1 engineering smoke is complete; it used independent trajectories and cannot isolate the final message. See the [handoff](codex_handoff.md). No 0.7.0 paid collection or training has occurred. Independent review remains required before the substantive larger study.
 
 The [0.5.0 methodology review](methodology_review.md) and [bounded evidence-access diagnostic](followup_protocol.md) guide immediate work within the mediation project. The diagnostic supports the original objective of crisis de-escalation with epistemic integrity. The environment extensions and RL work below remain proposals. The September 2026 [ProMediConv preprint](https://arxiv.org/html/2609.11101v1) trains a mediation strategy planner with RL in legal disputes. This overlaps with our proposed method, but does not answer the interstate de-escalation question. Neither learned strategy selection nor a change of domain alone establishes a contribution.
 

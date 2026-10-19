@@ -30,6 +30,8 @@ REQUIRED_DOCS = {
     "methodology_review.md",
     "followup_protocol.md",
     "post_verification_protocol.md",
+    "shared_prefix_protocol.md",
+    "codex_handoff.md",
 }
 PUBLIC_TEXT = [
     ROOT / "README.md",

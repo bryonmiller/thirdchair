@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.7.0 - Unreleased
+
+Add a separately versioned shared-prefix communication experiment while preserving the 0.6.1 source and live batch as the baseline. No new paid data have been collected.
+
+- Save one prefix through verification delivery and both round-three intentions, then deep-copy it for a Claude joint message and a protocol hold. Retain the existing instruction, scenario content, role filtering, and numerical engine.
+- Add separate offline plan, execution, and summary commands. Bind continuations to checkpoint and source/configuration identities; persist completed prefixes, reject interrupted journals and incompatible resumes, and retain failed prefixes and branches.
+- Count shared completion usage once and branch usage separately, including corrective attempts and explicit missing-cost counts. Keep this design out of legacy active/empty reports.
+- Add prospective protocol, durable execution instructions, handoff, and offline tests for prefix equality, disk round trips, isolation, provenance, resume behavior, missing outcomes, and costs. Independent scenario review remains outstanding before substantive trials.
+
 ## 0.6.1 - 2026-10-18
 
 Repair a public-context omission identified during prompt inspection. Requests are stateless, but earlier public event reports were absent from history; only actor messages and state updates remained. A delayed mediator could receive a document-authenticity result without the earlier public report explaining the document's claim.

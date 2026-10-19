@@ -12,6 +12,7 @@ from .policies import (LinkedVerificationPolicy, POLICY_LABEL, POLICY_NAME,
                        DELAYED_VERIFICATION, POST_VERIFICATION_STUDY)
 from .runner import ModelSeat
 from .scenario import evidence_text, load_scenario
+from .shared_prefix import build_shared_schedule, run_shared_schedule, summarize_shared_records
 from .tournament import (
     build_model_seats,
     build_schedule,
@@ -151,6 +152,48 @@ def _cmd_summarize(args: argparse.Namespace) -> int:
     return 0
 
 
+def _shared_schedule(args: argparse.Namespace):
+    configs = load_model_configs(args.models)
+    schedule = build_shared_schedule(
+        scenario_paths=_scenario_paths(args.scenario), labels=[c.label for c in configs],
+        actor_a=args.actor_a, actor_b=args.actor_b, mediator=args.mediator,
+        repetitions=args.repetitions, seed=args.seed, order_seed=args.order_seed,
+    )
+    return configs, schedule
+
+
+def _cmd_plan_shared(args: argparse.Namespace) -> int:
+    _, schedule = _shared_schedule(args)
+    print(f"Shared-prefix units: {len(schedule)}; continuations: {2 * len(schedule)}")
+    print(f"Planned model turns before retries: {15 * len(schedule)}")
+    print("10 shared actor calls + 1 mediator call + 4 branch actor calls per unit.")
+    print("Offline plan only. Paid collection requires an agreed run plan and spending cap.")
+    for item in schedule:
+        print(f"{item['scenario_id']} r{item['repetition']} seed={item['seed']}: "
+              f"{' then '.join(item['branch_order'])}")
+    return 0
+
+
+def _cmd_run_shared(args: argparse.Namespace) -> int:
+    configs, schedule = _shared_schedule(args)
+    issues = configuration_issues(configs)
+    if issues:
+        raise ValueError("Configuration is not ready:\n" + "\n".join(issues))
+    run_shared_schedule(schedule=schedule, model_seats=build_model_seats(configs), output=args.output)
+    print(f"Wrote {args.output}")
+    return 0
+
+
+def _cmd_summarize_shared(args: argparse.Namespace) -> int:
+    rendered = json.dumps(summarize_shared_records(load_records(args.inputs)),
+                          indent=2, sort_keys=True) + "\n"
+    if args.output:
+        Path(args.output).write_text(rendered, encoding="utf-8")
+    else:
+        print(rendered, end="")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="third-chair",
@@ -194,6 +237,25 @@ def build_parser() -> argparse.ArgumentParser:
     summarize.add_argument("--format", choices=["json", "markdown"], default="markdown")
     summarize.add_argument("--output")
     summarize.set_defaults(func=_cmd_summarize)
+
+    for command, handler in (("plan-shared-prefix", _cmd_plan_shared),
+                             ("run-shared-prefix", _cmd_run_shared)):
+        sub = subparsers.add_parser(command)
+        sub.add_argument("--models", required=True)
+        sub.add_argument("--scenario", default="port-disclosure")
+        sub.add_argument("--actor-a", required=True)
+        sub.add_argument("--actor-b", required=True)
+        sub.add_argument("--mediator", required=True)
+        sub.add_argument("--order-seed", type=int, required=True)
+        sub.add_argument("--repetitions", type=int, default=1)
+        sub.add_argument("--seed", type=int, default=8100)
+        if command == "run-shared-prefix":
+            sub.add_argument("--output", required=True)
+        sub.set_defaults(func=handler)
+    shared_summary = subparsers.add_parser("summarize-shared-prefix")
+    shared_summary.add_argument("inputs", nargs="+")
+    shared_summary.add_argument("--output")
+    shared_summary.set_defaults(func=_cmd_summarize_shared)
     return parser
 
 

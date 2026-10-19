@@ -79,6 +79,8 @@ def _identity_issues(record: dict[str, Any]) -> list[str]:
 
 
 def summarize_records(records: list[dict[str, Any]]) -> dict[str, Any]:
+    if any(r.get("record_type", "").startswith("shared_prefix_") for r in records):
+        raise ValueError("Shared-prefix records require summarize-shared-prefix; do not pool designs")
     successful = [item for item in records if item.get("run_status") == "succeeded"]
     failures = [item for item in records if item.get("run_status") != "succeeded"]
     grouped: dict[tuple[Any, ...], dict[str, dict[str, Any]]] = defaultdict(dict)

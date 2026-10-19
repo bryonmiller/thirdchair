@@ -11,6 +11,8 @@ DELAYED_VERIFICATION = "delayed-verification"
 DELAYED_MESSAGE = "delayed-message"
 DELAYED_LABEL = "rule-delayed-verification"
 POST_VERIFICATION_STUDY = "post-verification-study"
+SHARED_PREFIX = "shared-prefix-v1"
+SHARED_PROTOCOL_VERSION = "shared-prefix-0.7.0"
 
 
 def validate_delayed_scenario(scenario: dict[str, Any]) -> None:
