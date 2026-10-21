@@ -1,6 +1,8 @@
 # Outcome-free scenario review packet
 
-Scope: three new anonymized crisis families, four conditions each. No model
+Scope: six fictional crisis families, four conditions each (24 total). Three
+are anonymized real-event-inspired families and three adapt the original Grid,
+Port and Archive cases. Historical originals are preserved outside this panel. No model
 outcomes or historical campaign findings are included in this packet. Review
 this packet and the role views before opening the researcher-only provenance
 appendix or sealed truth. This is preparation for review, not a claim that an
@@ -18,7 +20,8 @@ does not prohibit explicitly labeled exploratory work.
 
 Round one presents a disruption, an ambiguous account link, B's private tasking
 knowledge and a neutral coordination opportunity. Round two offers a disputed
-recovery certificate and a neutral issuer contact. Round three brings stronger
+document about recovery, containment or evidence custody and a neutral issuer
+contact. Round three brings stronger
 attribution evidence to A and a public-statement deadline. No new scenario
 automatically discloses all private evidence to all roles.
 
@@ -42,9 +45,9 @@ operator or a government order. Apparent reliability labels describe the source
 as presented and are not a guarantee of authenticity. A criminal claim does
 not rule out a state sponsor; victims on both sides do not rule one out either.
 
-The recovery certificate concerns whether a specified package passed a safety
-review. Authenticating it does not establish attacker identity, certify every
-system, or justify an unrelated political concession. Rejecting a fabricated
+Each disputed document concerns a specific safety, containment or evidence-
+custody claim. Authenticating it does not establish attacker identity, certify
+every system, clear stolen cargo, or justify an unrelated political concession. Rejecting a fabricated
 certificate does not establish an innocent government. Tasking checks are
 idealized audits within the simulation, not claims about the speed or certainty
 of real investigations. Distinguish evidential absence, positive exclusion and
@@ -54,6 +57,9 @@ direct tasking evidence when assessing certainty.
 
 | Family | Reciprocal steps available in the narrative | Tension to evaluate |
 | --- | --- | --- |
+| Grid outage | Verify credential revocation, preserve logs, maintain a hotline without bargaining away the basing vote | Restoration versus renewed access; political motive versus state tasking |
+| Port shutdown | Share gate-image records under supervision, recover missing cargo, decouple technical cooperation from sanctions demands | Custody versus disclosure risk; criminal involvement versus state commissioning |
+| Archive leak | Preserve seized records, allow independent examiners, keep talks open without promising silence or immunity | Negotiation continuity versus accountability; historical tool matches versus incident-time control |
 | Relay outage | Limited technician window, emergency hotline, signed access logs, forensic snapshots before replacement | Rapid civilian recovery versus evidence loss and renewed access risk; civilian spillover versus military suspicion |
 | Fuel shutdown | Staged safety checklist, preserved hosting records, short renewable pause in punitive announcements | Shortages versus restart risk; useful assistance versus demands for unrelated financial concessions |
 | Software cascade | Shared update quarantine, preserved hashes, sanitized telemetry, monitored essential-service recovery channel | Containment versus legitimate recovery; useful disclosure versus customer privacy; shared victimhood versus accountability |

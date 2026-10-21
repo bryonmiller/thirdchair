@@ -3,7 +3,7 @@
 Prepared 2026-10-21. Researcher-only source mapping; do not place this document,
 factor labels, sealed truth or outcome reports in model prompts. The separate
 [review packet](v080_scenario_review.md) contains no observed model outcomes.
-Historical incidents motivate mechanisms; all countries, organizations,
+The three new families use historical incident mechanisms; all countries, organizations,
 timelines, evidence documents and experimental truth assignments are fictional.
 
 | New family | Historical inspiration | Retained mechanism | Fictional experimental additions |
@@ -43,13 +43,46 @@ and international spillover. These are a vendor investigation and a government
 assessment, respectively; neither supplies the invented custody-checked
 records, recovery certificate or private-competitor counterfactual.
 
+## Prospective adaptations of the original families
+
+The original files in `eval_data/scenarios/` remain unchanged and are excluded
+from the factorial selector. Twelve new copies under `v080/` retain the Grid,
+Port and Archive crises while crossing responsibility and document authenticity.
+They are fictional research designs, not newly claimed historical incidents.
+Each copy records its source scenario and source-file SHA-256 in evaluator-only
+metadata. Existing satellite, pipeline and software-cascade inputs are unchanged.
+
+| Family | Retained crisis | New disputed document | Responsibility-dependent evidence |
+| --- | --- | --- | --- |
+| Grid | Outage before a basing vote; criminal-access indicators and political pressure | Credential-revocation and log-custody notice | State commissioning of an access crew versus independently financed extortion |
+| Port | Container theft during an intrusion and sanctions dispute; historical server link | Gate-image custody receipt; containers remain missing in every condition | State-commissioned smuggling versus independently organized smuggling |
+| Archive | Stolen and edited diplomatic files before talks; tool similarities and political benefit | Sealed-record preservation and examiner-access certificate | State collection/influence operation versus independent crew using stolen tooling |
+
+These documents deliberately differ from the historical forged intercept,
+container-clearance update and hacktivist-payment bulletin. The old claims were
+entangled with attribution or subsequent facts. A simple boolean flip would
+not create a coherent factorial design. The copies use independently checkable
+containment/custody claims, with genuine and forged versions possible under
+either state responsibility. This changes the measurement context and must not
+be treated as a rerun or repaired version of an original outcome.
+
+The public narrative and initial A cards stay identical across each family's
+four cells. B's private tasking, later attribution evidence, corresponding
+verification results and any later neutral reporting follow the responsibility
+factor. For example, Archive's nonstate variant retains a real tool match but
+explains incident-time use through a stolen tool bundle. A lack of negotiating-
+team approval is never used to exonerate an otherwise state-directed operation.
+In Port, criminal participants can be state-commissioned, and the outdated
+server association remains limited evidence under either truth assignment.
+
 ## Factor construction
 
 Every family has four conditions: nonstate/forged, nonstate/genuine,
-state-B/forged, state-B/genuine. The same certificate claim is presented at
+state-B/forged, state-B/genuine. The same document claim is presented at
 round two; its source label and apparent reliability do not reveal its assigned
-validity. Genuine checks validate only the stated package/recovery scope.
-Forged checks invalidate the certificate and explicitly avoid attributing
+validity. Genuine checks validate only the stated recovery, containment or
+evidence-custody claim.
+Forged checks invalidate the document and explicitly avoid attributing
 either the intrusion or forgery. No factor says that forgery means innocence.
 
 Responsibility changes B's authorized private tasking information and round-three
@@ -59,7 +92,7 @@ with separate state-tasking versus nonstate-control evidence. Evidence IDs and
 timing stay stable across conditions; raw filenames/design metadata are
 evaluator-only. Opaque IDs remove labels, not narrative recognizability.
 
-The identity of the certificate forger is deliberately unspecified. Both
+The identity of the document forger is deliberately unspecified. Both
 governments can have motives to condition technical assistance on political
 relief; the experiment does not make every bargaining demand legitimate.
 Reciprocal containment, preservation and recovery arrangements can be proposed
@@ -67,8 +100,9 @@ without a false admission. The seven-posture engine cannot establish whether
 the parties actually implement those commitments. Record that distinction in
 analysis.
 
-All 12 conditions were authored before collection, not selected based on model
-performance. They share a template to isolate the two factors, which itself
+All 24 panel conditions were authored before their collection. Scenario
+expansion follows exploratory development; this is not an untouched confirmatory
+test set. The four cells within each family were not selected by live performance. They share a template to isolate the two factors, which itself
 limits diversity. Independent scenario review has not occurred. See the
 [prospective protocol](v080_protocol.md) for the unchanged models, scoring and
 collection limits.

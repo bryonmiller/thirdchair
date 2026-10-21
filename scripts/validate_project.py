@@ -143,7 +143,7 @@ def main() -> None:
     require(len(paths) == 3, "Expected exactly three scenarios")
     ids = [validate_scenario(path) for path in paths]
     expanded = sorted((SCENARIOS / "v080").rglob("*.json"))
-    require(len(expanded) == 12, "Expected three v0.8.0 families with four conditions each")
+    require(len(expanded) == 24, "Expected six v0.8.0 families with four conditions each")
     ids.extend(validate_scenario(path) for path in expanded)
     for path in sorted((ROOT / "eval_data" / "variants").glob("*.json")):
         ids.append(validate_scenario(path))

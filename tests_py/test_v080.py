@@ -134,8 +134,8 @@ class ResponseContractTests(unittest.TestCase):
 
 
 class ExpandedPanelTests(unittest.TestCase):
-    def test_three_families_fully_cross_responsibility_and_authenticity(self):
-        self.assertEqual(len(PATHS), 12)
+    def test_six_families_fully_cross_responsibility_and_authenticity(self):
+        self.assertEqual(len(PATHS), 24)
         families = {}
         for path in PATHS:
             scenario = load_scenario(path)
@@ -143,12 +143,59 @@ class ExpandedPanelTests(unittest.TestCase):
             families.setdefault(d["family_id"], set()).add((d["responsibility"], d["document_authenticity"]))
             self.assertEqual(scenario["ground_truth"]["responsible_actor"], d["responsibility"])
             authentic = d["document_authenticity"] == "genuine"
-            self.assertEqual(scenario["verification_results"]["D1"]["valid"], authentic)
-            self.assertEqual(scenario["ground_truth"]["forged_evidence_ids"], [] if authentic else ["D1"])
+            target = self.document_id(scenario)
+            self.assertEqual(scenario["verification_results"][target]["valid"], authentic)
+            self.assertEqual(scenario["ground_truth"]["forged_evidence_ids"], [] if authentic else [target])
             validate_delayed_scenario(scenario)
-        self.assertEqual(len(families), 3)
+        self.assertEqual(set(families), {"grid-vote", "port-sanctions", "archive-talks",
+                                         "satellite-outage", "pipeline-shutdown", "software-cascade"})
         for conditions in families.values():
             self.assertEqual(conditions, {(r, a) for r in ("state_b", "nonstate") for a in ("genuine", "forged")})
+
+    @staticmethod
+    def document_id(scenario):
+        return scenario["episodes"][1]["evidence"]["mediator"][0]["verification_targets"][0]
+
+    def test_authenticity_changes_only_document_validity_and_check(self):
+        for directory in sorted(PANEL.iterdir()):
+            for responsibility in ("nonstate", "state_b"):
+                scenarios = [load_scenario(directory / f"{directory.name}-{responsibility}-{a}.json")
+                             for a in ("genuine", "forged")]
+                normalized = []
+                for scenario in scenarios:
+                    target = self.document_id(scenario)
+                    value = copy.deepcopy(scenario)
+                    value.pop("id")
+                    value["design"].pop("document_authenticity")
+                    value["ground_truth"].pop("forged_evidence_ids")
+                    value["ground_truth"].pop("note")
+                    value["verification_results"][target].pop("valid")
+                    value["verification_results"][target].pop("content")
+                    for ep in value["episodes"]:
+                        for cards in ep["evidence"].values():
+                            for card in cards:
+                                if card["id"] == target:
+                                    card.pop("valid")
+                    normalized.append(value)
+                self.assertEqual(normalized[0], normalized[1], (directory.name, responsibility))
+
+    def test_responsibility_does_not_change_the_document_claim_or_check(self):
+        for directory in sorted(PANEL.iterdir()):
+            for authenticity in ("genuine", "forged"):
+                scenarios = [load_scenario(directory / f"{directory.name}-{r}-{authenticity}.json")
+                             for r in ("nonstate", "state_b")]
+                target = self.document_id(scenarios[0])
+                for key in ("verification_results", "starting_state", "postures"):
+                    if key == "verification_results":
+                        self.assertEqual(scenarios[0][key][target], scenarios[1][key][target])
+                    else:
+                        self.assertEqual(scenarios[0][key], scenarios[1][key])
+                self.assertNotEqual(scenarios[0]["seats"]["b"]["private_brief"],
+                                    scenarios[1]["seats"]["b"]["private_brief"])
+                decisive = set(scenarios[0]["ground_truth"]["decisive_evidence_ids"])
+                evidence = [[c["content"] for ep in s["episodes"] for c in ep["evidence"]["a"]
+                             if c["id"] in decisive] for s in scenarios]
+                self.assertNotEqual(evidence[0], evidence[1])
 
     def test_factor_conditions_keep_initial_public_context_and_opaque_mapping(self):
         for directory in PANEL.iterdir():
@@ -189,14 +236,17 @@ class ExpandedPanelTests(unittest.TestCase):
         with patch("socket.socket", side_effect=AssertionError("Network forbidden in synthetic test")):
             for path in PATHS:
                 scenario = load_scenario(path)
+                target = self.document_id(scenario)
+                first_id = scenario["episodes"][0]["evidence"]["a"][0]["id"]
+                final_id = scenario["ground_truth"]["decisive_evidence_ids"][0]
                 for policy in ("llm", POLICY_NAME):
                     for mode in ("active", "empty"):
                         with self.subTest(path=path.name, policy=policy, mode=mode):
                             a_outputs = []
-                            for ids in (["A1"], ["A1", "D1"], ["A3"]):
+                            for ids in ([first_id], [first_id, target], [final_id]):
                                 a_outputs.extend([actor_intent(35, "collect", ids),
                                                   actor_final(35, "collect", ids, accepts=False)])
-                            models = seats(a=a_outputs, mediator=[chair("verify", "A1"), chair("verify", "D1")])
+                            models = seats(a=a_outputs, mediator=[chair("verify", first_id), chair("verify", target)])
                             if policy == POLICY_NAME:
                                 models["M"] = ModelSeat("M", LinkedVerificationPolicy())
                             record = run_match(scenario_path=path, model_a=models["A"], model_b=models["B"],
@@ -204,11 +254,11 @@ class ExpandedPanelTests(unittest.TestCase):
                                                evidence_id_mode="original", mediator_policy=policy)
                             self.assertEqual(record["run_status"], "succeeded", record.get("error"))
                             self.assertFalse(record["rounds"][0]["delivered_verifications"])
-                            self.assertNotIn("D1", [c["target_id"] for c in record["rounds"][1]["delivered_verifications"]])
+                            self.assertNotIn(target, [c["target_id"] for c in record["rounds"][1]["delivered_verifications"]])
                             final_checks = record["rounds"][2]["delivered_verifications"]
                             if mode == "active":
-                                check = next(c for c in final_checks if c["target_id"] == "D1")
-                                self.assertEqual(check["valid"], scenario["verification_results"]["D1"]["valid"])
+                                check = next(c for c in final_checks if c["target_id"] == target)
+                                self.assertEqual(check["valid"], scenario["verification_results"][target]["valid"])
                             else:
                                 self.assertEqual(final_checks, [])
                             a_first = json.dumps(models["A"].client.calls[0])
@@ -228,11 +278,31 @@ class ExpandedPanelTests(unittest.TestCase):
                                   modes=["active", "empty"], repetitions=5, seed=88000,
                                   fixed_a="A", fixed_b="B", mediator_label="M" if policy == "llm" else None,
                                   mediator_policy=policy, order_seed=20261021)
-            self.assertEqual(len(rows), 120)
+            self.assertEqual(len(rows), 240)
             self.assertEqual({r["mode"] for r in rows}, {"active", "empty"})
             all_rows.extend(rows)
-        self.assertEqual(len(all_rows), 240)
-        self.assertEqual(estimate_calls(all_rows), 3060)
+        self.assertEqual(len(all_rows), 480)
+        self.assertEqual(estimate_calls(all_rows), 6120)
+
+    def test_full_rotation_covers_every_condition_assignment_and_control(self):
+        kwargs = dict(scenario_paths=_scenario_paths("expanded-v080"), labels=["A", "B", "M"],
+                      rotation="full", modes=["active", "empty"], repetitions=5,
+                      seed=188000, order_seed=20261022)
+        rows = build_schedule(**kwargs)
+        self.assertEqual(len(rows), 1440)
+        self.assertEqual(estimate_calls(rows), 19440)
+        self.assertEqual(len({r["match_id"] for r in rows}), 1440)
+        self.assertEqual(rows, build_schedule(**kwargs))
+        coverage = {}
+        for row in rows:
+            assignment = (row["a"], row["b"], row["mediator"])
+            self.assertEqual(set(assignment), {"A", "B", "M"})
+            key = (row["scenario_id"], row["repetition"], assignment)
+            coverage.setdefault(key, []).append(row)
+        self.assertEqual(len(coverage), 720)
+        for pair in coverage.values():
+            self.assertEqual({r["mode"] for r in pair}, {"active", "empty"})
+            self.assertEqual(pair[0]["seed"], pair[1]["seed"])
 
 
 if __name__ == "__main__":

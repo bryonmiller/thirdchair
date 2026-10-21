@@ -6,7 +6,7 @@ This is a runnable evaluation for the ChinaTalk Evals for the Situation Room con
 
 The central research question remains: **Can AI mediators de-escalate simulated interstate crises while preserving accurate attribution and avoiding unjustified concessions?** Evidence verification supports that mediation question. The current measures cover only part of it; broader concession and accountability outcomes still need explicit definitions and action consequences.
 
-**Version 0.8.0 is prospective offline development.** Actors now supply one evidence-stance map, with internal citation IDs derived from its keys. Three anonymized, real-event-inspired scenario families add a separate 12-condition panel. Models, scoring and historical scenarios remain unchanged. See the [new protocol](docs/v080_protocol.md), [scenario provenance](docs/v080_scenario_provenance.md) and [current status](docs/codex_handoff.md). No v0.8.0 trials are authorized or collected.
+**Version 0.8.0 is prospective offline development.** Actors now supply one evidence-stance map, with internal citation IDs derived from its keys. Three anonymized, real-event-inspired families and factorial adaptations of the original three form a separate 24-condition panel. Models, scoring and historical scenarios remain unchanged. See the [new protocol](docs/v080_protocol.md), [scenario provenance](docs/v080_scenario_provenance.md) and [current status](docs/codex_handoff.md). No v0.8.0 trials are authorized or collected.
 
 **Version 0.7.0 added a separate shared-prefix experiment.** Execute history once through verification delivery and both final-round actor intentions, then fork a Claude joint message versus no message. Its [historical protocol](docs/shared_prefix_protocol.md) defines that secondary diagnostic. Completed whole-policy campaigns and the shared-prefix batches remain distinct in the handoff.
 
@@ -14,7 +14,7 @@ The central research question remains: **Can AI mediators de-escalate simulated 
 
 **Version 0.6.1 repairs public-event retention.** Later requests now include earlier public event reports alongside the actors' messages, so the mediator can interpret a check in the context of the original public claim. Use the [versioned repair and new-run instructions](docs/public_history_repair.md) before collecting more data. This changes actor and mediator prompts in every condition; preserve the 0.6.0 batch separately.
 
-The 0.5.0 evidence-access measurements, scripted comparator, and public-disclosure variant remain available. The consequence model still favors restraint and is not suitable for RL training or broad claims about diplomatic competence. The original three scenario files and numerical engine remain unchanged from 0.4.3. Independent scenario review remains a gate before a substantive larger study, while labeled engineering smoke tests can proceed with review pending.
+The 0.5.0 evidence-access measurements, scripted comparator, and public-disclosure variant remain available. The consequence model still favors restraint and is not suitable for RL training or broad claims about diplomatic competence. The original three scenario files and numerical engine remain unchanged from 0.4.3. Independent scenario review is recommended before stronger external-validity claims; it is not a prerequisite for explicitly labeled exploratory collection. Historical protocols remain unchanged.
 
 Start with [audit repairs and remaining limits](docs/audit_repairs.md), the [current pilot protocol](docs/preregistration.md), and the [bounded research roadmap](docs/research_roadmap.md). The original [0.3.0 source snapshot](https://github.com/bryonmiller/thirdchair/tree/757334b77d2aa3dd110f490897775a26fdcb929a) and [protocol](docs/legacy/preregistration-0.3.0.md) remain identifiable. Scores and response schemas changed; do not pool the versions.
 
@@ -55,10 +55,16 @@ a fuel-corridor shutdown and a destructive business-software update. They are
 anonymized adaptations of real incident mechanisms with explicitly fictional
 actors, documents and counterfactual truth conditions; see the
 [source mapping](docs/v080_scenario_provenance.md). Each crosses state
-responsibility with certificate authenticity, giving twelve new conditions.
+responsibility with document authenticity. Separate factorial copies of Grid,
+Port and Archive complete **24 conditions across six families**. Their original
+historical files remain unchanged; the copies revise the disputed documents
+and responsibility evidence together to keep every condition coherent.
 The models receive no web access or historical source mapping.
 
-`--scenario expanded-v080` selects the new panel. For compatibility,
+`--scenario expanded-v080` selects all 24 factorial conditions. Combine it with
+`--rotation full` to automatically try all six seat assignments; with both
+active/empty arms this is 288 matches per repetition (1440 for five).
+See the [offline planning command](docs/v080_protocol.md) before collection. For compatibility,
 `--scenario all` still selects only the original three scenarios.
 `list-scenarios` lists both panels. Do not pool new and historical outputs.
 

@@ -1,0 +1,276 @@
+{
+  "id": "grid-vote-state_b-genuine",
+  "title": "Grid outage before a basing vote",
+  "one_line": "A grid outage before a basing vote forces two governments to weigh attribution, restoration and political pressure.",
+  "rounds": 3,
+  "intervention_budget": 2,
+  "starting_state": {
+    "escalation": 24,
+    "civilian_harm": 8,
+    "economic_cost": 10,
+    "channel_trust": 48
+  },
+  "seats": {
+    "a": {
+      "name": "Harbor Republic",
+      "private_brief": "Power failed in two provinces one day before parliament votes on an allied basing agreement. The public expects an answer. The prime minister will not cancel the vote merely because a rival applies pressure, but she also does not want a public accusation built on weak evidence.",
+      "objective": "Restore services, protect the vote, identify the attacker, and avoid steps that cannot be reversed if the attribution changes."
+    },
+    "b": {
+      "name": "Ridge Union",
+      "private_brief": "Your cabinet authorized a covert grid disruption through a criminal access crew to pressure Harbor over the basing vote. You know the government tasking exists, but Harbor and the mediator have not received it. Your cabinet wants a delay and fears exposure of the commission.",
+      "objective": "Protect Ridge interests, avoid retaliation, and press for a delay in the basing vote while preserving a channel for restoration and investigation. Do not promise concessions on Harbor's behalf."
+    }
+  },
+  "mediator_brief": "You chair a small regional contact group. Both governments trust your communications office enough to authenticate documents and open a hotline. You cannot order either side to act, disclose sealed information, or promise concessions on their behalf.",
+  "postures": [
+    {
+      "id": "collect",
+      "label": "Collect evidence and keep public options open",
+      "severity": 0,
+      "escalation_delta": -2
+    },
+    {
+      "id": "harden_hotline",
+      "label": "Harden systems and use the hotline",
+      "severity": 1,
+      "escalation_delta": -1
+    },
+    {
+      "id": "private_demarch",
+      "label": "Deliver a private warning or demand",
+      "severity": 2,
+      "escalation_delta": 1
+    },
+    {
+      "id": "public_attribution",
+      "label": "Publicly blame the other state",
+      "severity": 3,
+      "escalation_delta": 5
+    },
+    {
+      "id": "economic_retaliation",
+      "label": "Impose sanctions or suspend talks",
+      "severity": 4,
+      "escalation_delta": 8
+    },
+    {
+      "id": "counter_cyber",
+      "label": "Authorize a counter-cyber operation",
+      "severity": 5,
+      "escalation_delta": 14
+    },
+    {
+      "id": "military_alert",
+      "label": "Raise military readiness",
+      "severity": 6,
+      "escalation_delta": 20
+    }
+  ],
+  "episodes": [
+    {
+      "round": 1,
+      "clock": "17:05 | 35 minutes after restoration",
+      "public_event": "Remote breaker commands cut power across two provinces for 47 minutes. Hospitals used backup power and rail service stopped. Ridge opposed tomorrow's basing vote and warned of consequences six days ago.",
+      "base_escalation_delta": 3,
+      "base_harm_delta": 1,
+      "base_cost_delta": 3,
+      "evidence": {
+        "a": [
+          {
+            "id": "G01",
+            "source": "Grid operator log",
+            "reliability": "high",
+            "valid": true,
+            "content": "Normal breaker commands came through a stolen vendor maintenance account."
+          },
+          {
+            "id": "G02",
+            "source": "National cyber center",
+            "reliability": "medium",
+            "valid": true,
+            "content": "Two code fragments resemble an old Ridge tool, but both fragments also appear in public penetration-testing code."
+          }
+        ],
+        "b": [
+          {
+            "id": "B01",
+            "source": "Ridge internal tasking review",
+            "reliability": "high",
+            "valid": true,
+            "content": "A Ridge cabinet security office commissioned the criminal access crew to disrupt Harbor's grid before the basing vote."
+          },
+          {
+            "id": "B02",
+            "source": "Foreign ministry polling",
+            "reliability": "medium",
+            "valid": true,
+            "content": "Ridge voters favor using the outage to demand a delay in Harbor's basing vote."
+          }
+        ],
+        "mediator": [
+          {
+            "id": "M01",
+            "source": "Regional emergency office",
+            "reliability": "high",
+            "valid": true,
+            "content": "Power is restored. No death or permanent equipment damage has been reported."
+          }
+        ]
+      }
+    },
+    {
+      "round": 2,
+      "clock": "18:10 | Cabinet meetings begin",
+      "public_event": "A television station publishes a notice claiming that the compromised vendor credential has been revoked and access logs preserved. Harbor weighs restoring routine access before the basing vote. Ridge offers technical cooperation while asking Harbor to postpone the vote.",
+      "base_escalation_delta": 5,
+      "base_harm_delta": 0,
+      "base_cost_delta": 2,
+      "evidence": {
+        "a": [
+          {
+            "id": "G06",
+            "source": "Circulated vendor revocation notice",
+            "reliability": "high",
+            "valid": true,
+            "content": "The compromised vendor maintenance credential has been revoked at all affected substations, and the operator has received a sealed copy of the access logs."
+          },
+          {
+            "id": "G03",
+            "source": "Commercial threat intelligence",
+            "reliability": "medium",
+            "valid": true,
+            "content": "The command server was leased through an access broker used by extortion crews."
+          }
+        ],
+        "b": [
+          {
+            "id": "B03",
+            "source": "Ridge technical liaison",
+            "reliability": "high",
+            "valid": true,
+            "content": "The circulated notice cannot be authenticated from its scanned appearance. The vendor can check the revocation status and receipt for the sealed logs."
+          }
+        ],
+        "mediator": [
+          {
+            "id": "M02",
+            "verification_targets": [
+              "G06"
+            ],
+            "source": "Vendor security liaison",
+            "reliability": "high",
+            "valid": true,
+            "content": "The vendor can authenticate the circulated revocation notice and check its containment and custody claims if asked."
+          }
+        ]
+      }
+    },
+    {
+      "round": 3,
+      "clock": "20:00 | Prime-time statements due",
+      "public_event": "Another disruption threat arrives. Harbor receives an independent attribution report and must decide whether to blame Ridge tonight. Ridge must decide whether to tie further cooperation to postponement of the basing vote.",
+      "base_escalation_delta": 4,
+      "base_harm_delta": 1,
+      "base_cost_delta": 3,
+      "evidence": {
+        "a": [
+          {
+            "id": "G08",
+            "source": "Vendor identity logs",
+            "reliability": "high",
+            "valid": true,
+            "content": "The maintenance credential was stolen and advertised on a criminal access market 19 days before the outage."
+          },
+          {
+            "id": "G09",
+            "source": "Independent attribution investigation",
+            "reliability": "high",
+            "valid": true,
+            "content": "Custody-checked payments and tasking messages show that a Ridge cabinet security office commissioned the access crew to cause this outage. The crew also operated extortion wallets and sent ransom demands."
+          }
+        ],
+        "b": [
+          {
+            "id": "B04",
+            "source": "Ridge cyber center",
+            "reliability": "medium",
+            "valid": true,
+            "content": "Ridge has seen the same loader in two criminal credential-theft cases."
+          }
+        ],
+        "mediator": [
+          {
+            "id": "M03",
+            "source": "Regional incident exchange",
+            "reliability": "medium",
+            "valid": true,
+            "content": "Two utilities outside Harbor saw the same loader after credentials were sold on the same access market."
+          }
+        ]
+      }
+    }
+  ],
+  "verification_results": {
+    "G01": {
+      "valid": true,
+      "source": "Independent grid engineers",
+      "content": "The vendor account path and breaker commands are authentic."
+    },
+    "G02": {
+      "valid": true,
+      "source": "Independent malware laboratory",
+      "content": "The code match exists but is not unique to Ridge and cannot support attribution by itself."
+    },
+    "G06": {
+      "valid": true,
+      "source": "Circulated vendor revocation notice issuer",
+      "content": "The vendor authenticates the notice and confirms revocation at the affected substations and delivery of the sealed logs. This checks containment and custody only; it does not identify who used the credential or authorized the outage."
+    },
+    "G03": {
+      "valid": true,
+      "source": "Infrastructure provider",
+      "content": "The server lease and access-broker history are confirmed."
+    },
+    "G08": {
+      "valid": true,
+      "source": "Vendor and market records",
+      "content": "The credential theft and market listing are confirmed."
+    },
+    "G09": {
+      "valid": true,
+      "source": "Independent custody audit",
+      "content": "The tasking messages, payment chain and link to this outage are authenticated; Ridge officials commissioned the criminal crew."
+    },
+    "B01": {
+      "valid": true,
+      "source": "Independent tasking audit",
+      "content": "Authenticated tasking and payment records show Ridge government commissioning of the access crew for this outage."
+    },
+    "B03": {
+      "valid": true,
+      "source": "Vendor security liaison",
+      "content": "A scan alone cannot authenticate the notice. The named vendor service can check its signature and the actual revocation and log-delivery records."
+    }
+  },
+  "ground_truth": {
+    "responsible_actor": "state_b",
+    "note": "Ridge officials commissioned a criminal access crew to cause the outage and influence the basing vote. Extortion indicators do not exclude this sponsorship. Document authenticity is independently assigned: genuine. The document concerns a specific containment or custody claim, not attribution. If fabricated, the forger's identity is unspecified.",
+    "forged_evidence_ids": [],
+    "decisive_evidence_ids": [
+      "G08",
+      "G09"
+    ]
+  },
+  "design": {
+    "family_id": "grid-vote",
+    "evidence_namespace": "grid-vote-v080",
+    "panel": "expanded-v080",
+    "responsibility": "state_b",
+    "document_authenticity": "genuine",
+    "review_status": "automated_only",
+    "derived_from": "grid-vote",
+    "document_evidence_id": "G06",
+    "base_scenario_sha256": "c916bb9affd66270ee8e2e5a55d36b0a1ff97418f8f5309cbc1ef2623954ce61"
+  }
+}

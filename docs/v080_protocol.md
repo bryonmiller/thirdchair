@@ -3,7 +3,9 @@
 Written 2026-10-21 before any v0.8.0 collection. Status: offline implementation
 and review only; this document is not launch authorization. The owner approved
 response-contract repair, a Port information/timing audit, and three new
-anonymized, real-event-inspired scenario families. The proposed actor-model
+anonymized, real-event-inspired scenario families. The owner subsequently
+requested factorial copies of Grid, Port and Archive, completing six families
+with four conditions each. The proposed actor-model
 sensitivity comparison was explicitly excluded.
 
 ## Scope and preservation
@@ -46,69 +48,116 @@ Offline projections of captured failures are developer diagnostics only. A
 projection passing schema validation is neither a successful historical match
 nor evidence that a live model will follow the new instructions.
 
-## New panel
+## Complete 24-condition panel
 
-Three families in `eval_data/scenarios/v080/` extend the library to six families.
-Each new family has four counterfactual conditions, crossing State B responsible
-versus independent nonstate action with a genuine versus forged recovery safety
-certificate. The certificate's content concerns a recovery procedure, not the
-identity of the attacker. Its validity therefore does not encode innocence.
+Six families in `eval_data/scenarios/v080/` each have four counterfactual
+conditions: State B responsible versus independent nonstate action crossed with
+a genuine versus forged document. `--scenario expanded-v080` selects exactly
+these **24 conditions**. `--scenario all` still selects the three historical
+inputs for compatibility; those are excluded from the factorial panel.
+`list-scenarios` lists both, with distinct scenario IDs.
 
-Within a family, public events, initial A information, action menu, budget,
-timing and physical cost parameters are fixed. B's tasking information and
-later A attribution evidence follow the responsibility condition. The
-certificate's evaluator validity and delayed issuer check follow authenticity.
-Opaque-ID namespace and card identities remain constant across conditions.
-The real events motivate mechanisms; neither truth factor recreates historical
-ground truth. Source and counterfactual distinctions are documented in the
-[provenance appendix](v080_scenario_provenance.md).
+| Family | Document whose authenticity varies |
+| --- | --- |
+| Grid outage before a basing vote | Vendor credential-revocation and log-custody notice |
+| Port shutdown during a sanctions fight | Customs gate-image custody receipt |
+| Archive leak before peace talks | Police record-preservation and access certificate |
+| Relay outage | Terminal-repair safety certificate |
+| Fuel shutdown | Restoration-package safety certificate |
+| Software cascade | Replacement-update safety certificate |
 
-`--scenario expanded-v080` selects all 12 conditions. Existing `--scenario all`
-continues to select the original three inputs to preserve old command meaning;
-`list-scenarios` includes both panels. The twelve conditions are not twelve
-independent scenario families. The legacy cases are not retrospectively balanced
-factorial controls and must not be pooled into this panel as if they were.
+The first three families are prospective adaptations, not edits to historical
+files or extensions of their batches. Their original disputed documents could
+assert or imply attribution; toggling authenticity alone would create incoherent
+crossed cells. The factorial copies instead use specific containment/custody
+claims that can be genuine or fabricated under either responsibility condition.
+Political pressure, criminal participation and government commissioning remain
+separate. The forger's identity is unspecified. Even a genuine document does
+not authenticate every inference a government draws from it.
 
-## Proposed collection plan, awaiting separate approval
+Within each family, public events, initial A information, actions, budget,
+timing and physical cost parameters are fixed across the four versions.
+B's private tasking information and later attribution evidence follow the
+responsibility factor. Other private cards, checks and neutral reporting are
+changed wherever necessary to keep that assignment coherent. In the Archive
+nonstate version, for example, stolen state tooling explains a real historical
+code match without implying current state control. The document claim remains
+the same; its evaluator validity and issuer check follow authenticity only.
 
-Keep the completed Qwen campaign's exact roles and configuration:
+Opaque-ID namespace and card identities stay constant within a family.
+The new Grid/Port/Archive copies remove the old `-P` suffix from the target ID
+in both authenticity conditions; always use opaque IDs for collection. Their
+metadata records the original scenario and its SHA-256. The previous twelve
+satellite/pipeline/software inputs are byte-for-byte unchanged. Neither role prompt
+templates nor the scoring engine have changed in this panel expansion; new
+scenario content necessarily changes the information presented to each role.
+See the [provenance appendix](v080_scenario_provenance.md) and
+[outcome-free review packet](v080_scenario_review.md).
 
-| Role | Requested model | Pinned provider |
+## Offline campaign options, awaiting a separate run approval
+
+Retain the existing three pinned model configurations:
+
+| Model | Pinned provider | Previously fixed role |
 | --- | --- | --- |
-| State A | `openai/gpt-4.1-mini` | OpenAI |
-| State B | `qwen/qwen3-235b-a22b-2507` | DeepInfra |
-| Mediator | `anthropic/claude-haiku-4.5` | Anthropic |
+| `openai/gpt-4.1-mini` | OpenAI | State A |
+| `qwen/qwen3-235b-a22b-2507` | DeepInfra | State B |
+| `anthropic/claude-haiku-4.5` | Anthropic | Mediator |
 
 Temperature 0.2, maximum 4096 tokens, no API seed, no provider fallback. The
 configuration hash remains
 `327528b5cedbc474304d8f464fd5c09f362f0b452045a6d7aadc0cbce19cb241`.
-No actor-model sensitivity arm is planned. Provider IDs cannot freeze weights.
+When rotating seats, each model carries its configuration into its assigned
+role. Do not rotate only labels or reuse controls across assignments. This is
+role rotation, not the excluded replacement-model sensitivity comparison.
+Provider IDs cannot freeze weights.
 
-Proposed first expanded panel: five repetitions per condition, two policies,
-active/empty for each, totaling **240 matches and 120 pairs**. There are
-**3060 planned model turns** before corrections: 900 full active, 720 full
-empty, 720 scripted active, and 720 scripted empty. Full active may use fewer
-than its 15 planned turns when the mediator exhausts its budget. One correction
-can add a second physical request per model turn; bounded transport backoffs
-are separate and must be preserved in the eventual frozen execution plan.
+| Schedule across all 24 conditions | Repetitions | Matches | Planned model turns |
+| --- | ---: | ---: | ---: |
+| Full six seat assignments, LLM mediation and empty chair | 1 | 288 | 3888 |
+| Full six seat assignments, LLM mediation and empty chair | 5 | 1440 | 19440 |
+| Previous fixed roles, full and scripted policies with separate controls | 5 | 480 | 6120 |
 
-Use new repetition seeds starting at 88000 and recorded order seed 20261021;
-the implementation derives scenario/repetition seeds from the schedule. Shuffle
-the two policy schedules together, retaining distinct control IDs. The offline
-proposal is recorded in `results/v080-development/PROPOSED-PLAN.json`, including
-all 240 rows and source/scenario hashes; its status explicitly denies launch
-authorization. Use a fresh `results/expanded-v080-<approved-run-id>/`
-root, never historical output paths. Freeze source, scenario/config hashes,
-full schedule, execution wrapper version, allowance assumptions and stop policy
-with the owner's approval before any live dispatch. Existing approval receipts
-remain consumed. No new paid smoke prerequisite is imposed.
+These are alternatives, not an authorization to run their sum. Full rotation
+already exists; no new tournament engine is needed. The full-rotation schedule
+covers all six permutations, every condition and every repetition exactly once
+per active/empty arm. Pair order and within-pair arm order are randomized and
+recorded. The full-rotation count does not include scripted verification.
+That comparator requires separate fixed ordered-actor-pair schedules with its
+own controls; it must not be represented as another LLM mediator seat.
 
-The planning estimate for 240 matches is about **$1.71**.
-New prompt length, corrections, retries and provider prices can change this;
-it is not a current price quote or available-credit check. A **$2.50 new-panel
-operational threshold** is proposed for review, checked between matches with
-possible in-flight overshoot. Prior spending remains separately recorded and
-does not disappear. No new threshold or account limit is activated here.
+For an **offline count preview** using the public placeholder configuration:
+
+```bash
+.venv/bin/third-chair plan \
+  --models eval_data/models.example.json \
+  --scenario expanded-v080 --rotation full --modes active,empty \
+  --repetitions 5 --seed 188000 --order-seed 20261022
+```
+
+This command plans only and does not load a credential or call a provider.
+Its placeholder labels are not the live configuration. The model-independent
+schedule test verifies 1440 unique IDs, 720 complete planned pairs, unchanged
+pair seeds and all role permutations. Recorded seeds identify the schedule and
+opaque IDs, not identical stochastic provider trajectories.
+
+Full-active matches may use fewer than their 15 planned turns when mediator
+budget is exhausted. One correction may add a second request per model turn;
+transport retries are accounted separately. Preserve all failed or missing
+outcomes without replacement runs. Save every response, role assignment,
+returned model/provider, correction, check and score in a fresh versioned
+output root under the existing host service with automatic restart disabled.
+
+The earlier 240-match proposal, cost estimate and $2.50 threshold applied only
+to the first twelve conditions with fixed roles. They are superseded planning
+records, not a budget for the larger schedule. No current account allowance or
+new live cost estimate is verified here. Role rotation changes model token
+loads, particularly Claude's actor calls; do not scale cost only by match count.
+Before collection, agree on one exact schedule, current budget estimate and
+operational spending threshold, then freeze source/scenario/config hashes and
+bind the existing tested execution wrapper. No paid preflight, trial, replay or
+new automatic restart is authorized by this update. No additional paid smoke
+prerequisite is imposed.
 
 ## Analysis commitments and limitations
 
@@ -127,7 +176,7 @@ reciprocal proposals and unjustified concessions alongside numerical scores.
 Distinguish proposed arrangements from implemented actions. Retain exact
 transcripts with source IDs, roles and contemporaneous observations.
 
-The scenarios introduce reciprocal recovery opportunities in the narrative;
+The scenarios offer cooperation, recovery and evidence-sharing choices in the narrative;
 the existing engine still has seven coarse postures and does not implement
 contracts, technical restoration choices, welfare or deterrence payoffs. Its
 cost model favors restraint. Do not claim that these narrative trade-offs
@@ -136,7 +185,7 @@ claim-specific oracle, and the later attribution evidence is unusually strong.
 B's internal tasking can also become checkable if B cites it. Track those target
 choices rather than assuming all cases remain equally uncertain.
 
-Three related template families do not establish broad external validity.
+Six handcrafted families with shared templates do not establish broad external validity.
 Anonymization does not guarantee that models cannot recognize public incidents
 or recall them from training. Keeping names and sources out of prompts reduces
 direct cues but does not make an unseen test set. Review remains automated;
@@ -151,9 +200,9 @@ communication benefit from the completed verification-first policy.
 
 ## Future seat rotation
 
-Owner clarification, 2026-10-21: after the fixed-role expanded panel, rerun the
-same scenarios with models in different seats under a separately approved
-prospective campaign. This is role rotation using the existing models, not a
+Owner clarification, 2026-10-21: a future approved campaign may run the same
+scenarios with models in different seats. A fixed-role campaign is not a
+prerequisite. This is role rotation using the existing models, not a
 replacement-model sensitivity study. The scheduler already supports balanced
 and full permutations; no new execution mechanism is required. Preserve role
 assignment in every record, give each assignment its own matched controls,

@@ -1,0 +1,276 @@
+{
+  "id": "port-sanctions-state_b-genuine",
+  "title": "Port shutdown during a sanctions fight",
+  "one_line": "A port intrusion enables container theft during a sanctions dispute, while the governments weigh attribution and conditional cooperation.",
+  "rounds": 3,
+  "intervention_budget": 2,
+  "starting_state": {
+    "escalation": 28,
+    "civilian_harm": 5,
+    "economic_cost": 18,
+    "channel_trust": 42
+  },
+  "seats": {
+    "a": {
+      "name": "Bay Republic",
+      "private_brief": "Your largest port has stopped moving cargo two weeks after your government tightened sanctions on Hill Federation. Three containers tied to a smuggling case disappeared during manual operations. Exporters are losing money by the hour and the president wants a response before markets open.",
+      "objective": "Restore port operations, recover the missing containers, and punish the responsible actor without turning political motive into proof."
+    },
+    "b": {
+      "name": "Hill Federation",
+      "private_brief": "A Hill cabinet economic-security office secretly commissioned a smuggling network to disrupt Bay's port and extract selected containers. No military unit ran the intrusion, but your government authorized it. Your cabinet wants sanctions relief and fears exposure of its contractor arrangement.",
+      "objective": "Protect Hill interests, avoid retaliation, and seek sanctions talks while preserving a route to recover cargo and share evidence. Do not treat political benefit as proof or promise to speak for Bay."
+    }
+  },
+  "mediator_brief": "You represent a maritime security forum that both governments use for incident notifications. You can authenticate agency documents, pass private messages, and ask one member service to check a named item. You cannot lift sanctions or direct law enforcement.",
+  "postures": [
+    {
+      "id": "collect",
+      "label": "Collect evidence and keep public options open",
+      "severity": 0,
+      "escalation_delta": -2
+    },
+    {
+      "id": "harden_hotline",
+      "label": "Harden systems and use the hotline",
+      "severity": 1,
+      "escalation_delta": -1
+    },
+    {
+      "id": "private_demarch",
+      "label": "Deliver a private warning or demand",
+      "severity": 2,
+      "escalation_delta": 1
+    },
+    {
+      "id": "public_attribution",
+      "label": "Publicly blame the other state",
+      "severity": 3,
+      "escalation_delta": 5
+    },
+    {
+      "id": "economic_retaliation",
+      "label": "Impose sanctions or suspend talks",
+      "severity": 4,
+      "escalation_delta": 8
+    },
+    {
+      "id": "counter_cyber",
+      "label": "Authorize a counter-cyber operation",
+      "severity": 5,
+      "escalation_delta": 14
+    },
+    {
+      "id": "military_alert",
+      "label": "Raise military readiness",
+      "severity": 6,
+      "escalation_delta": 20
+    }
+  ],
+  "episodes": [
+    {
+      "round": 1,
+      "clock": "06:15 | Port offline for 55 minutes",
+      "public_event": "The scheduling and gate systems at Bay's largest container port fail. Hill state media praises the disruption as deserved punishment for new sanctions. No official claims responsibility.",
+      "base_escalation_delta": 3,
+      "base_harm_delta": 0,
+      "base_cost_delta": 5,
+      "evidence": {
+        "a": [
+          {
+            "id": "P01",
+            "source": "Port security log",
+            "reliability": "high",
+            "valid": true,
+            "content": "The intruder entered through an unpatched file-transfer server and disabled scheduling services."
+          },
+          {
+            "id": "P03",
+            "source": "Customs integrity unit",
+            "reliability": "high",
+            "valid": true,
+            "content": "Three containers tied to a smuggling network left through a manual gate during the outage."
+          }
+        ],
+        "b": [
+          {
+            "id": "H01",
+            "source": "Hill internal tasking review",
+            "reliability": "high",
+            "valid": true,
+            "content": "A cabinet economic-security office authorized the smuggling network's port operation. No military unit conducted the intrusion, but the cabinet office commissioned it."
+          },
+          {
+            "id": "H02",
+            "source": "Hill trade ministry",
+            "reliability": "medium",
+            "valid": true,
+            "content": "The port outage gives Hill leverage to demand sanctions talks, but exporters fear Bay retaliation."
+          }
+        ],
+        "mediator": [
+          {
+            "id": "PM01",
+            "source": "Maritime security forum",
+            "reliability": "high",
+            "valid": true,
+            "content": "Vessels are diverting, but emergency cargo can still enter through a secondary terminal."
+          }
+        ]
+      }
+    },
+    {
+      "round": 2,
+      "clock": "09:30 | Cargo backlog reaches 18,000 containers",
+      "public_event": "A customs custody receipt appears online claiming that manual-gate images are preserved for an inquiry. The three containers remain missing. Bay considers relying on the images for attribution. Hill offers technical help if Bay opens sanctions talks.",
+      "base_escalation_delta": 4,
+      "base_harm_delta": 0,
+      "base_cost_delta": 6,
+      "evidence": {
+        "a": [
+          {
+            "id": "P06",
+            "source": "Circulated customs custody receipt",
+            "reliability": "high",
+            "valid": true,
+            "content": "Customs has preserved a complete, unaltered copy of the manual-gate images in its evidence vault and can provide a supervised mirror to the joint inquiry."
+          },
+          {
+            "id": "P05",
+            "source": "Commercial infrastructure report",
+            "reliability": "medium",
+            "valid": true,
+            "content": "One command server was used by a Hill maritime-ministry contractor six months ago."
+          }
+        ],
+        "b": [
+          {
+            "id": "H03",
+            "source": "Hill contractor registry",
+            "reliability": "high",
+            "valid": true,
+            "content": "The contractor stopped using the command server five months ago. The server was later resold."
+          }
+        ],
+        "mediator": [
+          {
+            "id": "PM02",
+            "verification_targets": [
+              "P06"
+            ],
+            "source": "Customs evidence liaison",
+            "reliability": "high",
+            "valid": true,
+            "content": "The customs evidence custodian can check the receipt signature and whether the gate-image copy was deposited if asked."
+          }
+        ]
+      }
+    },
+    {
+      "round": 3,
+      "clock": "13:00 | Joint press window",
+      "public_event": "The port begins partial recovery. Police find one missing truck, but the containers remain missing. Bay receives an independent attribution report before its press window; Hill threatens reciprocal sanctions if named.",
+      "base_escalation_delta": 4,
+      "base_harm_delta": 1,
+      "base_cost_delta": 5,
+      "evidence": {
+        "a": [
+          {
+            "id": "P08",
+            "source": "Port police",
+            "reliability": "high",
+            "valid": true,
+            "content": "The containers left in trucks controlled by the smuggling network. A lost employee card opened the gate."
+          },
+          {
+            "id": "P09",
+            "source": "Independent attribution investigation",
+            "reliability": "high",
+            "valid": true,
+            "content": "The outage began four minutes before a smuggling coordinator called the drivers. Custody-checked instructions and payments link this operation to Hill's cabinet economic-security office."
+          }
+        ],
+        "b": [
+          {
+            "id": "H04",
+            "source": "Hill financial intelligence",
+            "reliability": "medium",
+            "valid": true,
+            "content": "The smuggling network paid a criminal access broker one week before the port outage."
+          }
+        ],
+        "mediator": [
+          {
+            "id": "PM03",
+            "source": "Regional police exchange",
+            "reliability": "medium",
+            "valid": true,
+            "content": "The truck ownership and access-broker lead are independently corroborated."
+          }
+        ]
+      }
+    }
+  ],
+  "verification_results": {
+    "P01": {
+      "valid": true,
+      "source": "Independent incident-response firm",
+      "content": "The intrusion path through the file-transfer server is confirmed."
+    },
+    "P03": {
+      "valid": true,
+      "source": "Port police",
+      "content": "The containers left during the outage and remain missing."
+    },
+    "P06": {
+      "valid": true,
+      "source": "Circulated customs custody receipt issuer",
+      "content": "The customs evidence custodian authenticates the receipt and confirms that the complete gate-image copy is preserved and available for supervised inspection. This does not say the containers were recovered or identify the intrusion's sponsor."
+    },
+    "P05": {
+      "valid": true,
+      "source": "Infrastructure provider",
+      "content": "The old contractor link is real, but control of the server changed months before the attack."
+    },
+    "P08": {
+      "valid": true,
+      "source": "Road camera team",
+      "content": "The truck ownership and gate route are confirmed."
+    },
+    "P09": {
+      "valid": true,
+      "source": "Independent custody audit",
+      "content": "The intrusion timeline, cabinet instructions and payments for the port operation are authenticated."
+    },
+    "H01": {
+      "valid": true,
+      "source": "Independent tasking audit",
+      "content": "Authenticated cabinet instructions show that Hill commissioned the smuggling operation through an economic-security office."
+    },
+    "H03": {
+      "valid": true,
+      "source": "Hosting provider",
+      "content": "The contractor's access ended before the server was resold."
+    }
+  },
+  "ground_truth": {
+    "responsible_actor": "state_b",
+    "note": "Hill officials commissioned the smuggling network to disable port screening and remove the containers; the network hired criminal access operators. Document authenticity is independently assigned: genuine. The document concerns a specific containment or custody claim, not attribution. If fabricated, the forger's identity is unspecified.",
+    "forged_evidence_ids": [],
+    "decisive_evidence_ids": [
+      "P08",
+      "P09"
+    ]
+  },
+  "design": {
+    "family_id": "port-sanctions",
+    "evidence_namespace": "port-sanctions-v080",
+    "panel": "expanded-v080",
+    "responsibility": "state_b",
+    "document_authenticity": "genuine",
+    "review_status": "automated_only",
+    "derived_from": "port-sanctions",
+    "document_evidence_id": "P06",
+    "base_scenario_sha256": "437942b503d9f07dd06f371cd2dd13509a8ca2d505912a3ecf675929b38ba449"
+  }
+}
