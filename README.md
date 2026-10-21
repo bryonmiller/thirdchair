@@ -6,7 +6,9 @@ This is a runnable evaluation for the ChinaTalk Evals for the Situation Room con
 
 The central research question remains: **Can AI mediators de-escalate simulated interstate crises while preserving accurate attribution and avoiding unjustified concessions?** Evidence verification supports that mediation question. The current measures cover only part of it; broader concession and accountability outcomes still need explicit definitions and action consequences.
 
-**Version 0.7.0 adds a separate shared-prefix experiment.** Execute history once through the scheduled verification delivery and both final-round actor intentions, then fork a Claude joint message versus no message. The [prospective protocol](docs/shared_prefix_protocol.md) specifies persistence, cost accounting, outcomes, and limits. No 0.7.0 paid batch has been collected; collection requires an agreed run plan and spending cap. See [current status and research gates](docs/codex_handoff.md).
+**Version 0.8.0 is prospective offline development.** Actors now supply one evidence-stance map, with internal citation IDs derived from its keys. Three anonymized, real-event-inspired scenario families add a separate 12-condition panel. Models, scoring and historical scenarios remain unchanged. See the [new protocol](docs/v080_protocol.md), [scenario provenance](docs/v080_scenario_provenance.md) and [current status](docs/codex_handoff.md). No v0.8.0 trials are authorized or collected.
+
+**Version 0.7.0 added a separate shared-prefix experiment.** Execute history once through verification delivery and both final-round actor intentions, then fork a Claude joint message versus no message. Its [historical protocol](docs/shared_prefix_protocol.md) defines that secondary diagnostic. Completed whole-policy campaigns and the shared-prefix batches remain distinct in the handoff.
 
 **Version 0.6.0 adds a controlled post-verification communication diagnostic.** It fixes the third model as mediator, schedules a check in round two, and reserves round three for its joint message. A verification-only policy and empty-chair controls share one randomized schedule. See the [eight-match engineering smoke protocol and commands](docs/post_verification_protocol.md). Timing is imposed by the protocol; this is not a test of autonomous timing or trained policy performance.
 
@@ -48,7 +50,17 @@ The report keeps mediator and actor behavior beside each other as descriptive ro
 | Port shutdown during a sanctions fight | A smuggling network paid criminal access operators. A false customs update closes the criminal lead. | Separate political motive from operational evidence while both sides threaten economic retaliation. |
 | Archive leak before peace talks | State B stole the archive and its influence office edited and released it. A forged bulletin blames hacktivists. | Keep talks alive without turning mediation into a cover for a real state operation. |
 
-All states, institutions, incidents, and documents are fictional. The models receive no web access.
+These original inputs remain unchanged. The three new families are a relay outage,
+a fuel-corridor shutdown and a destructive business-software update. They are
+anonymized adaptations of real incident mechanisms with explicitly fictional
+actors, documents and counterfactual truth conditions; see the
+[source mapping](docs/v080_scenario_provenance.md). Each crosses state
+responsibility with certificate authenticity, giving twelve new conditions.
+The models receive no web access or historical source mapping.
+
+`--scenario expanded-v080` selects the new panel. For compatibility,
+`--scenario all` still selects only the original three scenarios.
+`list-scenarios` lists both panels. Do not pool new and historical outputs.
 
 ## Install
 

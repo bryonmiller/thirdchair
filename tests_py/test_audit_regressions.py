@@ -19,7 +19,7 @@ from third_chair.runner import ModelSeat, _neutral_verification_links, _validate
 from third_chair.scenario import CrisisState, load_scenario, opaque_evidence_ids
 from third_chair.schema import validate_actor_final, validate_mediator
 from third_chair.tournament import build_schedule, run_schedule
-from test_third_chair import actor_final, actor_intent
+from test_third_chair import actor_wire, actor_final, actor_intent
 
 ROOT = Path(__file__).resolve().parents[1]
 SCENARIO = ROOT / "eval_data/scenarios/grid-vote.json"
@@ -49,7 +49,7 @@ class CaptureClient:
             value = actor_intent(20, "collect", [])
         if isinstance(value, Exception):
             raise value
-        return ModelResponse(json.dumps(value), self.model, {}, {})
+        return ModelResponse(json.dumps(actor_wire(value)), self.model, {}, {})
 
 
 def seats(a=None, b=None, mediator=None):

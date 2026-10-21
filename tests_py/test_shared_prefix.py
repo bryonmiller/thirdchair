@@ -21,7 +21,7 @@ from third_chair.shared_prefix import (build_shared_schedule, event_cost, run_sh
                                       summarize_shared_records)
 from third_chair.tournament import _append_jsonl
 from test_audit_regressions import chair
-from test_third_chair import actor_final, actor_intent
+from test_third_chair import actor_wire, actor_final, actor_intent
 
 ROOT = Path(__file__).resolve().parents[1]
 PORT = ROOT / "eval_data/scenarios/port-sanctions.json"
@@ -63,7 +63,7 @@ class FixtureClient:
                 value["private_reason"] = f"Private intent of {self.role} only."
         if number in self.invalid_on:
             value = {"invalid": True}
-        return ModelResponse(json.dumps(value), self.model, {"cost": 0.001}, {},
+        return ModelResponse(json.dumps(actor_wire(value)), self.model, {"cost": 0.001}, {},
                              returned_provider=self.provider_name, finish_reason="stop")
 
 
@@ -98,7 +98,7 @@ class SharedPrefixTests(unittest.TestCase):
             self.assertEqual(len(seats[label].client.calls), 5)
         self.assertFalse(seats["M"].client.calls)
         self.assertEqual(prefix["manifest"]["source_sha256"], source_digest())
-        self.assertEqual(prefix["manifest"]["package_version"], "0.7.0")
+        self.assertEqual(prefix["manifest"]["package_version"], "0.8.0")
         self.assertEqual(prefix["checkpoint_sha256"], fingerprint(checkpoint))
 
     def test_prefix_equality_branch_isolation_and_only_message_changes_actor_context(self):

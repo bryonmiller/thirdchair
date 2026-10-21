@@ -20,6 +20,8 @@ from .provenance import MAX_TOKENS, fingerprint, pair_identity, run_manifest
 from .scenario import (CrisisState, disclosed_evidence, evidence_text, load_scenario,
                        opaque_evidence_ids, public_evidence)
 from .schema import (
+    ACTOR_RESPONSE_CONTRACT,
+    normalize_actor_response,
     parse_json_object,
     validate_actor_final,
     validate_actor_intent,
@@ -62,6 +64,7 @@ def _call_for_json(
     seed: int | None,
     validator: Callable[[dict[str, Any]], None],
     event_sink: Callable[[dict[str, Any]], None],
+    response_adapter: Callable[[dict[str, Any]], dict[str, Any]] | None = None,
 ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     attempts: list[dict[str, Any]] = []
     working_messages = copy.deepcopy(messages)
@@ -97,6 +100,19 @@ def _call_for_json(
             returned_provider=getattr(response, "returned_provider", None),
             finish_reason=getattr(response, "finish_reason", None),
         )
+        # Providers can return an error inside a nominally successful HTTP response.
+        # Retain raw evidence/usage, but never treat it as a schema correction.
+        raw = response.raw if isinstance(response.raw, dict) else {}
+        choices = raw.get("choices")
+        choice = choices[0] if isinstance(choices, list) and choices else {}
+        embedded_error = raw.get("error") or (choice.get("error") if isinstance(choice, dict) else None)
+        if embedded_error:
+            code = embedded_error.get("code") if isinstance(embedded_error, dict) else None
+            attempt.update(status="provider_error", provider_error_code=(
+                code if isinstance(code, int) and not isinstance(code, bool) else None),
+                validation_error="Provider returned an embedded error; preserve usage and stop.")
+            event_sink(attempt)
+            raise ScorableResponseError(attempt["validation_error"], attempts)
         # A truncated or blocked response is a setup/provider failure, not a JSON
         # repair opportunity. Preserve usage and stop without another paid call.
         missing_finish = (attempt["finish_reason"] is None
@@ -111,8 +127,13 @@ def _call_for_json(
             raise ScorableResponseError(attempt["validation_error"], attempts)
         try:
             value = parse_json_object(response.content)
+            if response_adapter is not None:
+                value = response_adapter(value)
             validator(value)
             attempt["status"] = "succeeded"
+            if response_adapter is normalize_actor_response:
+                attempt.update(actor_response_contract=ACTOR_RESPONSE_CONTRACT,
+                               evidence_ids_derived=True)
             event_sink(attempt)
             return value, attempts
         except (ValueError, TypeError, OverflowError) as exc:
@@ -224,7 +245,8 @@ Choose your intended posture before seeing State {opponent.upper()}'s move this 
 POSTURES
 {_posture_lines(scenario)}
 
-For every cited ID, distinguish support, reject, or uncertain in evidence_stances.
+Use evidence_stances as the only citation field: map every cited ID, including
+rejected or uncertain evidence, to support, reject, or uncertain. Use {{}} if none.
 belief_opponent_responsible is your reported probability from 0 to 100, as an integer,
 that the other government caused or authorized the incident, not merely benefited from it.
 Return one JSON object and no surrounding prose:
@@ -233,7 +255,6 @@ Return one JSON object and no surrounding prose:
   "posture": "posture_id",
   "public_message": "message of at most 90 words",
   "private_reason": "reason of at most 120 words",
-  "evidence_ids": [],
   "evidence_stances": {{}}
 }}"""
 
@@ -415,7 +436,7 @@ def _actor_final_prompt(
     return f"""{context}
 
 Your initial intent was:
-{json.dumps(intent, sort_keys=True)}
+{json.dumps({key: value for key, value in intent.items() if key != 'evidence_ids'}, sort_keys=True)}
 
 State {opponent.upper()} announced this posture: {opponent_intent['posture']}
 State {opponent.upper()} said: {opponent_intent['public_message']}
@@ -429,7 +450,8 @@ Choose the posture your government will actually take this round. You may keep o
 POSTURES
 {_posture_lines(scenario)}
 
-For every cited ID, distinguish support, reject, or uncertain in evidence_stances.
+Use evidence_stances as the only citation field: map every cited ID, including
+rejected or uncertain evidence, to support, reject, or uncertain. Use {{}} if none.
 belief_opponent_responsible is an integer probability from 0 to 100 that the other
 government caused or authorized the incident, not merely benefited from it.
 
@@ -442,7 +464,6 @@ Return one JSON object and no surrounding prose:
   "posture": "posture_id",
   "accepts_intervention": false,
   "public_message": "message of at most 90 words",
-  "evidence_ids": [],
   "evidence_stances": {{}}
 }}"""
 
@@ -730,6 +751,7 @@ def run_match(
                     ],
                     event_sink=record_event,
                     seed=_seed(seed, round_number, 1),
+                    response_adapter=normalize_actor_response,
                     validator=lambda value: validate_actor_intent(
                         value,
                         postures=posture_ids,
@@ -759,6 +781,7 @@ def run_match(
                     ],
                     event_sink=record_event,
                     seed=_seed(seed, round_number, 2),
+                    response_adapter=normalize_actor_response,
                     validator=lambda value: validate_actor_intent(
                         value,
                         postures=posture_ids,
@@ -921,6 +944,7 @@ def run_match(
                 ],
                 event_sink=record_event,
                 seed=_seed(seed, round_number, 4),
+                response_adapter=normalize_actor_response,
                 validator=lambda value: _validate_visible_final(
                     value,
                     postures=posture_ids,
@@ -956,6 +980,7 @@ def run_match(
                 ],
                 event_sink=record_event,
                 seed=_seed(seed, round_number, 5),
+                response_adapter=normalize_actor_response,
                 validator=lambda value: _validate_visible_final(
                     value,
                     postures=posture_ids,

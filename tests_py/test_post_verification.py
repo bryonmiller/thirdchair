@@ -20,7 +20,7 @@ from third_chair.runner import ModelSeat, run_match
 from third_chair.scenario import load_scenario
 from third_chair.tournament import build_schedule, estimate_calls, run_schedule
 from test_audit_regressions import SCENARIO, CaptureClient, chair, seats
-from test_third_chair import actor_final, actor_intent
+from test_third_chair import actor_wire, actor_final, actor_intent
 
 ROOT = Path(__file__).resolve().parents[1]
 PORT = ROOT / "eval_data/scenarios/port-sanctions.json"
@@ -80,7 +80,7 @@ class PostVerificationTests(unittest.TestCase):
                 value = (actor_final(70, "harden_hotline", ids, accepts=False)
                          if "actually take this round" in prompt else
                          actor_intent(70, "harden_hotline", ids))
-                return ModelResponse(json.dumps(value), self.model, {}, {})
+                return ModelResponse(json.dumps(actor_wire(value)), self.model, {}, {})
         models = {"A": ModelSeat("A", EvidenceClient("provider/A")),
                   "B": ModelSeat("B", EvidenceClient("provider/B")),
                   "M": ModelSeat("M", CaptureClient("provider/M", [chair("joint"), chair("joint")])),

@@ -28,6 +28,8 @@ SCENARIOS = ROOT / "eval_data" / "scenarios"
 
 
 def _scenario_paths(value: str) -> list[Path]:
+    if value == "expanded-v080":
+        return sorted((SCENARIOS / "v080").rglob("*.json"))
     if value == "port-disclosure":
         return [SCENARIOS / "port-sanctions.json",
                 ROOT / "eval_data" / "variants" / "port-sanctions-disclosed.json"]
@@ -50,7 +52,7 @@ def _modes(value: str) -> list[str]:
 
 
 def _cmd_list(_: argparse.Namespace) -> int:
-    for path in sorted(SCENARIOS.glob("*.json")):
+    for path in sorted(SCENARIOS.rglob("*.json")):
         scenario = load_scenario(path)
         print(f"{scenario['id']}\t{scenario['title']}")
     return 0

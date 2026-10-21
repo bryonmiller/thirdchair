@@ -16,6 +16,22 @@ DIAGNOSES = {
     "none",
 }
 CHANNELS = {"hold", "joint", "private_a", "private_b", "verify"}
+ACTOR_RESPONSE_CONTRACT = "stance-map-0.8.0"
+
+
+def normalize_actor_response(value: dict[str, Any]) -> dict[str, Any]:
+    """Derive internal citations from the sole model-authored stance map.
+
+    This applies only to new wire responses, never to historical records.
+    Do not infer, delete or repair stances, probabilities or actions.
+    """
+    if "evidence_ids" in value:
+        raise ValueError("Omit evidence_ids; put every cited ID, including rejected or "
+                         "uncertain evidence, only in evidence_stances")
+    stances = value.get("evidence_stances")
+    if not isinstance(stances, dict) or not all(isinstance(key, str) for key in stances):
+        raise ValueError("evidence_stances must be an object mapping evidence IDs to stances")
+    return value | {"evidence_ids": sorted(stances)}
 
 
 def parse_json_object(text: str) -> dict[str, Any]:
@@ -72,8 +88,13 @@ def _evidence_ids(value: Any, known_ids: set[str]) -> None:
 
 
 def _evidence_stances(value: Any, cited_ids: list[str]) -> None:
-    if not isinstance(value, dict) or set(value) != set(cited_ids):
-        raise ValueError("evidence_stances must assign a stance to every cited ID, and no others")
+    if not isinstance(value, dict):
+        raise ValueError("evidence_stances must be an object")
+    if set(value) != set(cited_ids):
+        missing = sorted(set(cited_ids) - set(value))
+        extra = sorted(set(value) - set(cited_ids))
+        raise ValueError("evidence_stances must assign a stance to every cited ID, and no others; "
+                         f"missing stances: {missing}; extra stance IDs: {extra}")
     if any(stance not in ("support", "reject", "uncertain") for stance in value.values()):
         raise ValueError("Each evidence stance must be support, reject, or uncertain")
 

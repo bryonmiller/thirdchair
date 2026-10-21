@@ -8,7 +8,6 @@
     "posture",
     "public_message",
     "private_reason",
-    "evidence_ids",
     "evidence_stances"
   ],
   "properties": {
@@ -28,13 +27,6 @@
       "type": "string",
       "minLength": 1
     },
-    "evidence_ids": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      },
-      "uniqueItems": true
-    },
     "evidence_stances": {
       "type": "object",
       "additionalProperties": {
@@ -44,7 +36,7 @@
           "uncertain"
         ]
       },
-      "description": "Exactly the IDs in evidence_ids, with their stated relationship to the decision. Enforced by runtime validation."
+      "description": "The sole citation representation: every cited ID, including rejected and uncertain evidence, maps to its stance. Internal evidence_ids are derived from these keys."
     }
   },
   "additionalProperties": false

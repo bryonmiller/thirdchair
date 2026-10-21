@@ -10,6 +10,7 @@ from urllib.parse import urlsplit, urlunsplit
 
 from . import __version__
 from .policies import SHARED_PREFIX, SHARED_PROTOCOL_VERSION
+from .schema import ACTOR_RESPONSE_CONTRACT
 
 SCORING_VERSION = "baseline-0.4.0"
 MAX_TOKENS = 1400
@@ -69,6 +70,7 @@ def run_manifest(
 ) -> dict[str, Any]:
     value = {
         "package_version": __version__,
+        "actor_response_contract": ACTOR_RESPONSE_CONTRACT,
         "scoring_version": SCORING_VERSION,
         "control_design": control_design,
         "evidence_id_mode": evidence_id_mode,

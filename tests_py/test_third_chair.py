@@ -40,10 +40,17 @@ def actor_final(
     }
 
 
+def actor_wire(value):
+    """New actor wire format; engine fixtures keep their derived citation lists."""
+    if "posture" in value and "evidence_stances" in value:
+        return {key: item for key, item in value.items() if key != "evidence_ids"}
+    return value
+
+
 class FakeClient:
     def __init__(self, model: str, outputs: list[dict]) -> None:
         self.model = model
-        self.outputs = [json.dumps(item) for item in outputs]
+        self.outputs = [json.dumps(actor_wire(item)) for item in outputs]
 
     def chat(self, messages, *, temperature, max_tokens, seed):
         return ModelResponse(
