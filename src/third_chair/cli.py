@@ -11,6 +11,7 @@ from .policies import (LinkedVerificationPolicy, POLICY_LABEL, POLICY_NAME,
                        DelayedVerificationPolicy, DELAYED_LABEL, DELAYED_MESSAGE,
                        DELAYED_VERIFICATION, POST_VERIFICATION_STUDY)
 from .runner import ModelSeat
+from .panel import panel_contract, validate_panel_schedule
 from .scenario import evidence_text, load_scenario
 from .shared_prefix import build_shared_schedule, run_shared_schedule, summarize_shared_records
 from .tournament import (
@@ -87,6 +88,8 @@ def _schedule_from_args(args: argparse.Namespace):
         mediator_policy=args.mediator_policy,
         mediator_label=args.mediator,
         order_seed=args.order_seed,
+        complete_panel=(args.scenario == "expanded-v080" and not args.actor_a
+                        and args.mediator_policy == "llm"),
     )
 
 
@@ -102,11 +105,22 @@ def _cmd_plan(args: argparse.Namespace) -> int:
     print(f"Mediator policy: {args.mediator_policy}; execution-order seed: {args.order_seed}")
     if args.mediator:
         print(f"Selected LLM mediator: {args.mediator}")
+    if schedule[0].get("coverage_design"):
+        contract = panel_contract(schedule)
+        print("Coverage: " + json.dumps(validate_panel_schedule(schedule, contract), sort_keys=True))
+        if args.plan_output:
+            with Path(args.plan_output).open("x", encoding="utf-8") as handle:
+                json.dump({"coverage_contract": contract, "schedule": schedule}, handle,
+                          default=str, indent=2, sort_keys=True)
+                handle.write("\n")
+    elif args.plan_output:
+        raise ValueError("--plan-output requires the complete expanded-v080 panel")
     return 0
 
 
 def _cmd_run(args: argparse.Namespace) -> int:
     configs, schedule = _schedule_from_args(args)
+    contract = panel_contract(schedule) if schedule[0].get("coverage_design") else None
     issues = configuration_issues(configs)
     if issues:
         raise ValueError("Configuration is not ready:\n" + "\n".join(issues))
@@ -121,6 +135,7 @@ def _cmd_run(args: argparse.Namespace) -> int:
         schedule=schedule,
         model_seats=model_seats,
         output=args.output,
+        coverage_contract=contract,
     )
     print(f"Wrote {args.output}")
     return 0
@@ -232,6 +247,8 @@ def build_parser() -> argparse.ArgumentParser:
         sub.add_argument("--seed", type=int, default=4100)
         if command == "run":
             sub.add_argument("--output", default="results/matches.jsonl")
+        else:
+            sub.add_argument("--plan-output", help="Write a fresh complete-panel schedule and coverage contract")
         sub.set_defaults(func=handler)
 
     summarize = subparsers.add_parser("summarize")

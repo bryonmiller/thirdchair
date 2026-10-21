@@ -287,7 +287,7 @@ class ExpandedPanelTests(unittest.TestCase):
     def test_full_rotation_covers_every_condition_assignment_and_control(self):
         kwargs = dict(scenario_paths=_scenario_paths("expanded-v080"), labels=["A", "B", "M"],
                       rotation="full", modes=["active", "empty"], repetitions=5,
-                      seed=188000, order_seed=20261022)
+                      seed=188000, order_seed=20261022, complete_panel=True)
         rows = build_schedule(**kwargs)
         self.assertEqual(len(rows), 1440)
         self.assertEqual(estimate_calls(rows), 19440)

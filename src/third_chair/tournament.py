@@ -213,6 +213,7 @@ def build_schedule(
     mediator_policy: str = "llm",
     mediator_label: str | None = None,
     order_seed: int | None = None,
+    complete_panel: bool = False,
 ) -> list[dict[str, Any]]:
     if repetitions < 1:
         raise ValueError("repetitions must be at least one")
@@ -243,6 +244,12 @@ def build_schedule(
     paths = [Path(path) for path in scenario_paths]
     if not paths or len({p.resolve() for p in paths}) != len(paths):
         raise ValueError("Use a non-empty list of distinct scenario paths")
+    if complete_panel:
+        from .panel import validate_panel_inputs
+        validate_panel_inputs(paths, labels, rotation, modes, repetitions, seed,
+                              order_seed, fixed_a, fixed_b, mediator_policy, mediator_label)
+        paths.sort(key=lambda p: str(p.resolve()))
+        modes = ["active", "empty"]
     scenario_ids: set[str] = set()
     family_indices: dict[str, int] = {}
     for scenario_index, scenario_path in enumerate(paths):
@@ -274,6 +281,10 @@ def build_schedule(
                     + repetition * 10_000
                     + (0 if fixed_a else assignment_index) * 100
                 )
+                if complete_panel:
+                    # One mapping per family/repetition, shared by all truth cells,
+                    # role permutations and arms. No collisions at >100 repeats.
+                    pair_seed = seed + family_index * repetitions + repetition - 1
                 for mode in modes:
                     identity = fingerprint({"scenario": scenario, "seed": pair_seed,
                                             "roles": [a, b, mediator], "repetition": repetition,
@@ -299,6 +310,8 @@ def build_schedule(
                             "order_seed": order_seed,
                         }
                     )
+                    if complete_panel:
+                        schedule[-1]["coverage_design"] = "factorial24-full-v1"
     if order_seed is not None:
         # Keep paired conditions adjacent, randomize pair order and within-pair order.
         blocks = [schedule[i:i + len(modes)] for i in range(0, len(schedule), len(modes))]
@@ -343,7 +356,11 @@ def _append_jsonl(path: Path, value: dict[str, Any]) -> None:
 def run_schedule(
     *, schedule: list[dict[str, Any]], model_seats: dict[str, ModelSeat],
     output: str | Path,
+    coverage_contract: dict[str, Any] | None = None,
 ) -> None:
+    if coverage_contract is not None or any(row.get("coverage_design") for row in schedule):
+        from .panel import validate_panel_schedule
+        validate_panel_schedule(schedule, coverage_contract)
     output_path = Path(output)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     events_path = output_path.with_suffix(output_path.suffix + ".events.jsonl")
@@ -355,6 +372,9 @@ def run_schedule(
     if len(order_seeds) != 1:
         raise ValueError("Use one execution-order seed per schedule")
     for record in existing:
+        if (coverage_contract is not None
+                and record.get("coverage_contract_sha256") != fingerprint(coverage_contract)):
+            raise ValueError("Complete-panel coverage contract changed; use a new output")
         if record.get("run_status") not in {"succeeded", "failed"}:
             raise ValueError("Output contains an unfinished match; preserve it and use a new output")
         manifest = record.get("manifest")
@@ -408,4 +428,6 @@ def run_schedule(
             raise RuntimeError("Configuration changed during execution; inspect the event journal")
         record["execution_position"] = next(i for i, row in enumerate(bound, 1)
                                             if row["match_id"] == item["match_id"])
+        if coverage_contract is not None:
+            record["coverage_contract_sha256"] = fingerprint(coverage_contract)
         _append_jsonl(output_path, record)

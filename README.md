@@ -64,6 +64,11 @@ The models receive no web access or historical source mapping.
 `--scenario expanded-v080` selects all 24 factorial conditions. Combine it with
 `--rotation full` to automatically try all six seat assignments; with both
 active/empty arms this is 288 matches per repetition (1440 for five).
+The complete-panel planner enforces equal coverage and common evidence-ID mappings
+across seats, and can freeze an auditable schedule. The prospective
+[power and analysis plan](docs/v080_statistical_plan.md) recommends 121 repetitions
+per condition/assignment/arm for a moderate paired effect under stated assumptions;
+five repetitions remain exploratory. No number of runs guarantees significance.
 See the [offline planning command](docs/v080_protocol.md) before collection. For compatibility,
 `--scenario all` still selects only the original three scenarios.
 `list-scenarios` lists both panels. Do not pool new and historical outputs.

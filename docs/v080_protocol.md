@@ -119,12 +119,21 @@ Provider IDs cannot freeze weights.
 | Previous fixed roles, full and scripted policies with separate controls | 5 | 480 | 6120 |
 
 These are alternatives, not an authorization to run their sum. Full rotation
-already exists; no new tournament engine is needed. The full-rotation schedule
+uses the existing engine with a new complete-panel coverage contract. The full-rotation schedule
 covers all six permutations, every condition and every repetition exactly once
 per active/empty arm. Pair order and within-pair arm order are randomized and
 recorded. The full-rotation count does not include scripted verification.
 That comparator requires separate fixed ordered-actor-pair schedules with its
 own controls; it must not be represented as another LLM mediator seat.
+
+The owner subsequently required equal exposure and a repetition calculation.
+The [prospective statistical plan](v080_statistical_plan.md) specifies the
+complete-panel requirement, matched opaque-ID mapping across assignments,
+paired tests, multiplicity, missingness and effect-size sensitivity. Its
+moderate-effect recommendation is 121 scheduled repetitions per condition,
+assignment and arm: 34,848 matches and 470,448 planned turns, subject to the
+explicit assumptions. The one/five-repeat options above remain exploratory,
+not powered substitutes. No new budget or collection is approved here.
 
 For an **offline count preview** using the public placeholder configuration:
 
@@ -137,8 +146,11 @@ For an **offline count preview** using the public placeholder configuration:
 
 This command plans only and does not load a credential or call a provider.
 Its placeholder labels are not the live configuration. The model-independent
-schedule test verifies 1440 unique IDs, 720 complete planned pairs, unchanged
-pair seeds and all role permutations. Recorded seeds identify the schedule and
+schedule tests verify 1440 unique IDs, 720 complete planned pairs, common
+family/repetition seeds across all roles and arms, and all role permutations.
+Use `--plan-output` with a fresh path to freeze the coverage contract and full
+ordered schedule. The complete panel refuses missing/duplicate cells, changed
+provenance and incomplete designs before dispatch. Recorded seeds identify the schedule and
 opaque IDs, not identical stochastic provider trajectories.
 
 Full-active matches may use fewer than their 15 planned turns when mediator
@@ -165,7 +177,8 @@ Report every attempted cell, failure, missing outcome and correction, without
 selective reruns. Report successful paired comparisons separately by family,
 responsibility, authenticity and policy, with eligible denominators and
 missingness sensitivity. Five pairs per cell are exploratory, not a power
-calculation. Compare full and scripted effects relative to their own controls;
+calculation; the new statistical plan supplies prospective powered alternatives.
+Compare full and scripted effects relative to their own controls;
 the trajectories are independent, not shared-prefix message contrasts.
 
 Keep modeled crisis cost, reported-attribution Brier error, API dollars and
